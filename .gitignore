@@ -1,0 +1,21 @@
+Temp/
+Library/
+obj/
+*.svd
+*.apk
+.DS_Store
+
+!Library/*.asset
+!Library/AssetImportState
+!Library/AssetVersioning.db
+!Library/BuildPlayer.prefs
+!Library/ScriptMapper
+!Library/assetservercachev3
+!Library/expandedItems
+!Library/guidmapper
+!Library/unity default resources
+!Library/unity editor resources
+
+Carrot.unitypackage
+
+iOSBuild/
