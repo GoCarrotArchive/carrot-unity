@@ -51,7 +51,22 @@ public class Carrot : MonoBehaviour
       }
    }
 
-   public delegate void AuthenticationStatusChangedHandler(object sender, CarrotBridge.AuthStatus status);
+   public enum AuthStatus : int
+   {
+      Denied = -1,
+      Undetermined = 0,
+      ReadOnly = 1,
+      Ready = 2
+   }
+
+   public enum FacebookAuthPermission : int
+   {
+      Read = 0,
+      PublishActions = 1,
+      ReadWrite = 2 // Not suggested
+   }
+
+   public delegate void AuthenticationStatusChangedHandler(object sender, AuthStatus status);
    public delegate void ApplicationLinkRecievedHandler(object sender, string targetURL);
 
    public event AuthenticationStatusChangedHandler AuthenticationStatusChanged;
@@ -87,21 +102,6 @@ public class Carrot : MonoBehaviour
             }
          }
 #endif
-      }
-
-      public enum AuthStatus : int
-      {
-         Denied = -1,
-         Undetermined = 0,
-         ReadOnly = 1,
-         Ready = 2
-      }
-
-      public enum FacebookAuthPermission : int
-      {
-         Read = 0,
-         PublishActions = 1,
-         ReadWrite = 2 // Not suggested
       }
 
       /// <summary>
@@ -400,7 +400,7 @@ public class Carrot : MonoBehaviour
    {
       if(AuthenticationStatusChanged != null)
       {
-         AuthenticationStatusChanged(this, (CarrotBridge.AuthStatus)int.Parse(message));
+         AuthenticationStatusChanged(this, (AuthStatus)int.Parse(message));
       }
    }
 
