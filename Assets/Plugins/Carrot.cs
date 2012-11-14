@@ -66,6 +66,18 @@ public class Carrot : MonoBehaviour
       ReadWrite = 2 // Will fall back to iOS < 6 Facebook SSO
    }
 
+   public static string authStatusString(AuthStatus authStatus)
+   {
+      switch(authStatus)
+      {
+         case Carrot.AuthStatus.NotAuthorized: return "Carrot user has not authorized the application.";
+         case Carrot.AuthStatus.Undetermined: return "Carrot user status is undetermined.";
+         case Carrot.AuthStatus.ReadOnly: return "Carrot user has not allowed the 'publish_actions' permission.";
+         case Carrot.AuthStatus.Ready: return "Carrot user is authorized.";
+         default: return "Invalid Carrot AuthStatus.";
+      }
+   }
+
    public delegate void AuthenticationStatusChangedHandler(object sender, AuthStatus status);
    public delegate void ApplicationLinkRecievedHandler(object sender, string targetURL);
 
