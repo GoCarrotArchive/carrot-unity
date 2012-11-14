@@ -410,9 +410,15 @@ public class Carrot : MonoBehaviour
    #region UnitySendMessage Handlers
    public void authenticationStatusChanged(string message)
    {
+      AuthStatus updatedStatus = (AuthStatus)int.Parse(message);
+      if(Debug.isDebugBuild)
+      {
+         Debug.Log("[Carrot] Auth Status: " + Carrot.authStatusString(updatedStatus));
+      }
+
       if(AuthenticationStatusChanged != null)
       {
-         AuthenticationStatusChanged(this, (AuthStatus)int.Parse(message));
+         AuthenticationStatusChanged(this, updatedStatus);
       }
    }
 
