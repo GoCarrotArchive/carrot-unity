@@ -63,7 +63,7 @@ public class Carrot : MonoBehaviour
    {
       Read = 0,
       PublishActions = 1,
-      ReadWrite = 2 // Not suggested
+      ReadWrite = 2 // Will fall back to iOS < 6 Facebook SSO
    }
 
    public delegate void AuthenticationStatusChangedHandler(object sender, AuthStatus status);
