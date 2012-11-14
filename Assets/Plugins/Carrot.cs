@@ -244,7 +244,7 @@ public class Carrot : MonoBehaviour
       /// <param name="allowLoginUI">(iOS only) Allow the login UI to be shown if the Application is not authenticated.</param>
       /// <param name="permission">(iOS only) Specify the permissions being requested. FB/iOS standards suggest that you should first ask only for read permissions, and then ask for write permissions at the time when they are needed.</param>
       /// <returns><c>false</c> if there are no Facebook accounts registered with the device (iOS 6 only), or the Intent was not defined in AndroidManifest.xml (Android only); <c>true</c> otherwise.</returns>
-      public bool performFacebookAuth(bool allowLoginUI = true, FacebookAuthPermission permission = FacebookAuthPermission.ReadWrite)
+      public bool doFacebookAuth(bool allowLoginUI = true, FacebookAuthPermission permission = FacebookAuthPermission.ReadWrite)
       {
 #if UNITY_ANDROID
          return mCarrot.Call<bool>("doFacebookAuth");
