@@ -53,7 +53,7 @@ public class Carrot : MonoBehaviour
 
    public enum AuthStatus : int
    {
-      Denied = -1,
+      NotAuthorized = -1,
       Undetermined = 0,
       ReadOnly = 1,
       Ready = 2
