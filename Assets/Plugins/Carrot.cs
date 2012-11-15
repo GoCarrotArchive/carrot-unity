@@ -220,9 +220,10 @@ public class Carrot : MonoBehaviour
       /// <param name="actionId">Carrot action id.</param>
       /// <param name="objectId">Carrot object id.</param>
       /// <param name="objectProperties">Parameters to be submitted with the action.</param>
-      public bool postAction(string actionId, string objectId, IDictionary objectProperties)
+      /// <param name="objectInstanceId">Object instance id to create or re-use.</param>
+      public bool postAction(string actionId, string objectId, IDictionary objectProperties, string objectInstanceId = null)
       {
-         return postAction(actionId, null, objectId, objectProperties);
+         return postAction(actionId, null, objectId, objectProperties, objectInstanceId);
       }
 
       /// <summary>
@@ -232,8 +233,9 @@ public class Carrot : MonoBehaviour
       /// <param name="actionProperties">Parameters to be submitted with the action.</param>
       /// <param name="objectId">Carrot object id.</param>
       /// <param name="objectProperties">Parameters to be submitted with the action.</param>
+      /// <param name="objectInstanceId">Object instance id to create or re-use.</param>
       /// <returns><c>true</c> if the action request has been cached, and will be sent to the server; <c>false</c> otherwise.</returns>
-      public bool postAction(string actionId, IDictionary actionProperties, string objectId, IDictionary objectProperties)
+      public bool postAction(string actionId, IDictionary actionProperties, string objectId, IDictionary objectProperties, string objectInstanceId = null)
       {
          string actionPropertiesJson = (actionProperties == null ? null : Json.Serialize(actionProperties));
          string objectPropertiesJson = Json.Serialize(objectProperties);
@@ -241,12 +243,13 @@ public class Carrot : MonoBehaviour
          using(AndroidJavaObject actionIdString = new AndroidJavaObject("java.lang.String", actionId),
                                  actionPropertiesString = new AndroidJavaObject("java.lang.String", actionPropertiesJson),
                                  objectIdString = new AndroidJavaObject("java.lang.String", objectId),
-                                 objectPropertiesString = new AndroidJavaObject("java.lang.String", objectPropertiesJson))
+                                 objectPropertiesString = new AndroidJavaObject("java.lang.String", objectPropertiesJson),
+                                 objectInstanceIdString = new AndroidJavaObject("java.lang.String", objectInstanceId))
          {
-            return mCarrot.Call<bool>("postJsonAction", actionIdString, actionPropertiesString, objectIdString, objectPropertiesString);
+            return mCarrot.Call<bool>("postJsonAction", actionIdString, actionPropertiesString, objectIdString, objectPropertiesString, objectInstanceIdString);
          }
 #else
-         return (Carrot_PostCreateAction(actionId, actionPropertiesJson, objectId, objectPropertiesJson) == 1);
+         return (Carrot_PostCreateAction(actionId, actionPropertiesJson, objectId, objectPropertiesJson, objectInstanceId) == 1);
 #endif
       }
 
@@ -352,7 +355,8 @@ public class Carrot : MonoBehaviour
          [MarshalAs(UnmanagedType.LPStr)] string actionId,
          [MarshalAs(UnmanagedType.LPStr)] string actionPropertiesJson,
          [MarshalAs(UnmanagedType.LPStr)] string objectId,
-         [MarshalAs(UnmanagedType.LPStr)] string objectPropertiesJson);
+         [MarshalAs(UnmanagedType.LPStr)] string objectPropertiesJson,
+         [MarshalAs(UnmanagedType.LPStr)] string objectInstanceId);
 
       [DllImport(DLL_IMPORT_TARGET)]
       private extern static int Carrot_DoFacebookAuth(
@@ -382,6 +386,24 @@ public class Carrot : MonoBehaviour
       DontDestroyOnLoad(this);
       mCarrot = new CarrotBridge(FacebookAppId, CarrotAppSecret);
       mCarrot.setDelegateObject(this);
+
+      // Hax
+      if(Carrot.Instance.Status != Carrot.AuthStatus.Ready)
+      {
+         Carrot.Instance.doFacebookAuth();
+      }
+      else
+      {
+         Carrot.Instance.postAchievement("chicken");
+
+         Carrot.Instance.postHighScore(42);
+
+         IDictionary objectProperties = new Dictionary<string, object>();
+         objectProperties.Add("title", "Unity Test");
+         objectProperties.Add("image", "http://static.ak.fbcdn.net/rsrc.php/v2/y_/r/9myDd8iyu0B.gif");
+         objectProperties.Add("description", "Testing the Unity dynamic object generation");
+         Carrot.Instance.postAction("push", "commit", objectProperties);
+      }
    }
 
    void OnDestroy()
