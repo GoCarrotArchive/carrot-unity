@@ -106,8 +106,8 @@ public class Carrot : MonoBehaviour
             using(AndroidJavaObject activity = playerClass.GetStatic<AndroidJavaObject>("currentActivity"),
                                     appIdString = new AndroidJavaObject("java.lang.String", appId),
                                     appSecretString = new AndroidJavaObject("java.lang.String", appSecret),
-                                    hostnameString = new AndroidJavaObject("java.lang.String", hostname),
-                                    debugUDIDString = new AndroidJavaObject("java.lang.String", debugUDID))
+                                    hostnameString = (hostname != null ? new AndroidJavaObject("java.lang.String", hostname) : null),
+                                    debugUDIDString = (debugUDID != null ? new AndroidJavaObject("java.lang.String", debugUDID) : null))
             {
                mCarrot = new AndroidJavaObject("com.CarrotInc.Carrot.Carrot", activity, appIdString,
                                                appSecretString, hostnameString, debugUDIDString);
@@ -174,7 +174,7 @@ public class Carrot : MonoBehaviour
       public bool postHighScore(uint score, string leaderboardId = null)
       {
 #if UNITY_ANDROID
-         using(AndroidJavaObject leaderboardIdString = new AndroidJavaObject("java.lang.String", leaderboardId))
+         using(AndroidJavaObject leaderboardIdString = (leaderboardId != null ? new AndroidJavaObject("java.lang.String", leaderboardId) : null))
          {
             return mCarrot.Call<bool>("postHighScore", (int)score, leaderboardIdString);
          }
@@ -204,7 +204,7 @@ public class Carrot : MonoBehaviour
          string actionPropertiesJson = (actionProperties == null ? null : Json.Serialize(actionProperties));
 #if UNITY_ANDROID
          using(AndroidJavaObject actionIdString = new AndroidJavaObject("java.lang.String", actionId),
-                                 actionPropertiesString = new AndroidJavaObject("java.lang.String", actionPropertiesJson),
+                                 actionPropertiesString = (actionPropertiesJson != null ? new AndroidJavaObject("java.lang.String", actionPropertiesJson) : null),
                                  objectInstanceIdString = new AndroidJavaObject("java.lang.String", objectInstanceId))
          {
             return mCarrot.Call<bool>("postJsonAction", actionIdString, actionPropertiesString, objectInstanceIdString);
@@ -241,10 +241,10 @@ public class Carrot : MonoBehaviour
          string objectPropertiesJson = Json.Serialize(objectProperties);
 #if UNITY_ANDROID
          using(AndroidJavaObject actionIdString = new AndroidJavaObject("java.lang.String", actionId),
-                                 actionPropertiesString = new AndroidJavaObject("java.lang.String", actionPropertiesJson),
+                                 actionPropertiesString = (actionPropertiesJson != null ? new AndroidJavaObject("java.lang.String", actionPropertiesJson) : null),
                                  objectIdString = new AndroidJavaObject("java.lang.String", objectId),
                                  objectPropertiesString = new AndroidJavaObject("java.lang.String", objectPropertiesJson),
-                                 objectInstanceIdString = new AndroidJavaObject("java.lang.String", objectInstanceId))
+                                 objectInstanceIdString = (objectInstanceId != null ? new AndroidJavaObject("java.lang.String", objectInstanceId) : null))
          {
             return mCarrot.Call<bool>("postJsonAction", actionIdString, actionPropertiesString, objectIdString, objectPropertiesString, objectInstanceIdString);
          }
