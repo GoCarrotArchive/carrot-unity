@@ -1,6 +1,7 @@
 Temp/
 Library/
 obj/
+docs/
 *.svd
 *.apk
 .DS_Store
