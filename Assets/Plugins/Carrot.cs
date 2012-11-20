@@ -97,7 +97,7 @@ public class Carrot : MonoBehaviour
       public CarrotBridge(string appId, string appSecret)
       {
          mIsDisposed = false;
-#if UNITY_ANDROID
+#if UNITY_ANDROID && !UNITY_EDITOR
          string hostname = null;
          string debugUDID = null;
 
@@ -124,10 +124,12 @@ public class Carrot : MonoBehaviour
       {
          get
          {
-#if UNITY_ANDROID
+#if UNITY_ANDROID  && !UNITY_EDITOR
             return (AuthStatus)mCarrot.Call<int>("getStatus");
-#else
+#elif !UNITY_EDITOR
             return (AuthStatus)Carrot_AuthStatus();
+#else
+            return AuthStatus.Undetermined;
 #endif
          }
       }
@@ -138,12 +140,12 @@ public class Carrot : MonoBehaviour
       /// <param name="accessToken">Facebook user access token.</param>
       public void setAccessToken(string accessToken)
       {
-#if UNITY_ANDROID
+#if UNITY_ANDROID && !UNITY_EDITOR
          using(AndroidJavaObject accessTokenString = new AndroidJavaObject("java.lang.String", accessToken))
          {
             mCarrot.Call("setAccessToken", accessTokenString);
          }
-#else
+#elif !UNITY_EDITOR
          Carrot_SetAccessToken(accessToken);
 #endif
       }
@@ -155,13 +157,16 @@ public class Carrot : MonoBehaviour
       /// <returns><c>true</c> if the achievement request has been cached, and will be sent to the server; <c>false</c> otherwise.</returns>
       public bool postAchievement(string achievementId)
       {
-#if UNITY_ANDROID
+#if UNITY_ANDROID && !UNITY_EDITOR
          using(AndroidJavaObject achievementIdString = new AndroidJavaObject("java.lang.String", achievementId))
          {
             return mCarrot.Call<bool>("postAchievement", achievementIdString);
          }
-#else
+#elif !UNITY_EDITOR
          return (Carrot_PostAchievement(achievementId) == 1);
+#else
+         Debug.Log("Carrot:postAchievement('" + achievementId + "')");
+         return true;
 #endif
       }
 
@@ -173,13 +178,16 @@ public class Carrot : MonoBehaviour
       /// <returns><c>true</c> if the high score request has been cached, and will be sent to the server; <c>false</c> otherwise.</returns>
       public bool postHighScore(uint score, string leaderboardId = null)
       {
-#if UNITY_ANDROID
+#if UNITY_ANDROID && !UNITY_EDITOR
          using(AndroidJavaObject leaderboardIdString = (leaderboardId != null ? new AndroidJavaObject("java.lang.String", leaderboardId) : null))
          {
             return mCarrot.Call<bool>("postHighScore", (int)score, leaderboardIdString);
          }
-#else
+#elif !UNITY_EDITOR
          return (Carrot_PostHighScore(score, leaderboardId) == 1);
+#else
+         Debug.Log("Carrot::postHighScore(" + score + (leaderboardId != null ? ", '" + leaderboardId + "')" : ")"));
+         return true;
 #endif
       }
 
@@ -202,15 +210,18 @@ public class Carrot : MonoBehaviour
       public bool postAction(string actionId, IDictionary actionProperties, string objectInstanceId)
       {
          string actionPropertiesJson = (actionProperties == null ? null : Json.Serialize(actionProperties));
-#if UNITY_ANDROID
+#if UNITY_ANDROID && !UNITY_EDITOR
          using(AndroidJavaObject actionIdString = new AndroidJavaObject("java.lang.String", actionId),
                                  actionPropertiesString = (actionPropertiesJson != null ? new AndroidJavaObject("java.lang.String", actionPropertiesJson) : null),
                                  objectInstanceIdString = new AndroidJavaObject("java.lang.String", objectInstanceId))
          {
             return mCarrot.Call<bool>("postJsonAction", actionIdString, actionPropertiesString, objectInstanceIdString);
          }
-#else
+#elif !UNITY_EDITOR
          return (Carrot_PostInstanceAction(actionId, actionPropertiesJson, objectInstanceId) == 1);
+#else
+         Debug.Log("Carrot::postAction('" + actionId + "', " + actionPropertiesJson + ", '" + objectInstanceId + "')");
+         return true;
 #endif
       }
 
@@ -239,7 +250,7 @@ public class Carrot : MonoBehaviour
       {
          string actionPropertiesJson = (actionProperties == null ? null : Json.Serialize(actionProperties));
          string objectPropertiesJson = Json.Serialize(objectProperties);
-#if UNITY_ANDROID
+#if UNITY_ANDROID && !UNITY_EDITOR
          using(AndroidJavaObject actionIdString = new AndroidJavaObject("java.lang.String", actionId),
                                  actionPropertiesString = (actionPropertiesJson != null ? new AndroidJavaObject("java.lang.String", actionPropertiesJson) : null),
                                  objectIdString = new AndroidJavaObject("java.lang.String", objectId),
@@ -248,8 +259,11 @@ public class Carrot : MonoBehaviour
          {
             return mCarrot.Call<bool>("postJsonAction", actionIdString, actionPropertiesString, objectIdString, objectPropertiesString, objectInstanceIdString);
          }
-#else
+#elif !UNITY_EDITOR
          return (Carrot_PostCreateAction(actionId, actionPropertiesJson, objectId, objectPropertiesJson, objectInstanceId) == 1);
+#else
+         Debug.Log("Carrot::postAction('" + actionId + "', " + actionPropertiesJson + ", '" + objectId + "', " + objectPropertiesJson + ")");
+         return true;
 #endif
       }
 
@@ -261,14 +275,17 @@ public class Carrot : MonoBehaviour
       /// <returns><c>false</c> if there are no Facebook accounts registered with the device (iOS 6 only), or the Intent was not defined in AndroidManifest.xml (Android only); <c>true</c> otherwise.</returns>
       public bool doFacebookAuth(bool allowLoginUI = true, FacebookAuthPermission permission = FacebookAuthPermission.ReadWrite)
       {
-#if UNITY_ANDROID
+#if UNITY_ANDROID && !UNITY_EDITOR
          return mCarrot.Call<bool>("doFacebookAuth");
-#else
+#elif !UNITY_EDITOR
          return (Carrot_DoFacebookAuth(allowLoginUI ? 1 : 0, (int)permission) == 1);
+#else
+         Debug.Log("Carrot::doFacebookAuth");
+         return true;
 #endif
       }
 
-#if UNITY_ANDROID
+#if UNITY_ANDROID && !UNITY_EDITOR
       internal void setActivity()
       {
          using(AndroidJavaClass playerClass = new AndroidJavaClass("com.unity3d.player.UnityPlayer"))
@@ -283,9 +300,9 @@ public class Carrot : MonoBehaviour
 
       internal void setDelegateObject(MonoBehaviour delegateObject)
       {
-#if UNITY_ANDROID
+#if UNITY_ANDROID && !UNITY_EDITOR
          mCarrot.Call("setUnityHandler", delegateObject.name);
-#else
+#elif !UNITY_EDITOR
          Carrot_AssignUnityDelegate(delegateObject.name);
 #endif
       }
@@ -301,7 +318,7 @@ public class Carrot : MonoBehaviour
       {
          if(!mIsDisposed)
          {
-#if UNITY_ANDROID
+#if UNITY_ANDROID && !UNITY_EDITOR
             if(disposing)
             {
                if(mCarrot != null)
@@ -322,7 +339,7 @@ public class Carrot : MonoBehaviour
       }
       #endregion
 
-#if !UNITY_ANDROID
+#if !UNITY_ANDROID && !UNITY_EDITOR
       #region Dll Imports
 #if UNITY_IPHONE
       private const string DLL_IMPORT_TARGET = "__Internal";
@@ -370,7 +387,7 @@ public class Carrot : MonoBehaviour
 #endif
 
       #region Member Variables
-#if UNITY_ANDROID
+#if UNITY_ANDROID && !UNITY_EDITOR
       AndroidJavaObject mCarrot;
 #endif
       bool mIsDisposed;
@@ -391,10 +408,10 @@ public class Carrot : MonoBehaviour
    void OnDestroy()
    {
       mDestroying = true;
-      mCarrot.Dispose();
+      if(mCarrot != null) mCarrot.Dispose();
    }
 
-#if UNITY_ANDROID
+#if UNITY_ANDROID && !UNITY_EDITOR
    void OnApplicationPause(bool paused)
    {
       if(!paused)
