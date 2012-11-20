@@ -386,24 +386,6 @@ public class Carrot : MonoBehaviour
       DontDestroyOnLoad(this);
       mCarrot = new CarrotBridge(FacebookAppId, CarrotAppSecret);
       mCarrot.setDelegateObject(this);
-
-      // Hax
-      if(Carrot.Instance.Status != Carrot.AuthStatus.Ready)
-      {
-         Carrot.Instance.doFacebookAuth();
-      }
-      else
-      {
-         Carrot.Instance.postAchievement("chicken");
-
-         Carrot.Instance.postHighScore(42);
-
-         IDictionary objectProperties = new Dictionary<string, object>();
-         objectProperties.Add("title", "Unity Test");
-         objectProperties.Add("image", "http://static.ak.fbcdn.net/rsrc.php/v2/y_/r/9myDd8iyu0B.gif");
-         objectProperties.Add("description", "Testing the Unity dynamic object generation");
-         Carrot.Instance.postAction("push", "commit", objectProperties);
-      }
    }
 
    void OnDestroy()
