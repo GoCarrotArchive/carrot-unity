@@ -81,8 +81,8 @@ public class Carrot : MonoBehaviour
    public delegate void AuthenticationStatusChangedHandler(object sender, AuthStatus status);
    public delegate void ApplicationLinkRecievedHandler(object sender, string targetURL);
 
-   public event AuthenticationStatusChangedHandler AuthenticationStatusChanged;
-   public event ApplicationLinkRecievedHandler ApplicationLinkRecieved;
+   public static event AuthenticationStatusChangedHandler AuthenticationStatusChanged;
+   public static event ApplicationLinkRecievedHandler ApplicationLinkRecieved;
 
    /// <summary>
    /// A C# bridge to the native Carrot SDK.
