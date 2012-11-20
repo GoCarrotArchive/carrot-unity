@@ -98,16 +98,16 @@ public class Carrot : MonoBehaviour
       {
          mIsDisposed = false;
 #if UNITY_ANDROID && !UNITY_EDITOR
-         string hostname = null;
-         string debugUDID = null;
+         string hostname = "";
+         string debugUDID = "";
 
          using(AndroidJavaClass playerClass = new AndroidJavaClass("com.unity3d.player.UnityPlayer"))
          {
             using(AndroidJavaObject activity = playerClass.GetStatic<AndroidJavaObject>("currentActivity"),
                                     appIdString = new AndroidJavaObject("java.lang.String", appId),
                                     appSecretString = new AndroidJavaObject("java.lang.String", appSecret),
-                                    hostnameString = (hostname != null ? new AndroidJavaObject("java.lang.String", hostname) : null),
-                                    debugUDIDString = (debugUDID != null ? new AndroidJavaObject("java.lang.String", debugUDID) : null))
+                                    hostnameString = new AndroidJavaObject("java.lang.String", hostname),
+                                    debugUDIDString = new AndroidJavaObject("java.lang.String", debugUDID))
             {
                mCarrot = new AndroidJavaObject("com.CarrotInc.Carrot.Carrot", activity, appIdString,
                                                appSecretString, hostnameString, debugUDIDString);
@@ -179,7 +179,8 @@ public class Carrot : MonoBehaviour
       public bool postHighScore(uint score, string leaderboardId = null)
       {
 #if UNITY_ANDROID && !UNITY_EDITOR
-         using(AndroidJavaObject leaderboardIdString = (leaderboardId != null ? new AndroidJavaObject("java.lang.String", leaderboardId) : null))
+         if(leaderboardId == null) leaderboardId = "";
+         using(AndroidJavaObject leaderboardIdString = new AndroidJavaObject("java.lang.String", leaderboardId))
          {
             return mCarrot.Call<bool>("postHighScore", (int)score, leaderboardIdString);
          }
@@ -209,17 +210,19 @@ public class Carrot : MonoBehaviour
       /// <param name="objectInstanceId">Carrot object instance id.</param>
       public bool postAction(string actionId, IDictionary actionProperties, string objectInstanceId)
       {
-         string actionPropertiesJson = (actionProperties == null ? null : Json.Serialize(actionProperties));
 #if UNITY_ANDROID && !UNITY_EDITOR
+         string actionPropertiesJson = (actionProperties == null ? "" : Json.Serialize(actionProperties));
          using(AndroidJavaObject actionIdString = new AndroidJavaObject("java.lang.String", actionId),
-                                 actionPropertiesString = (actionPropertiesJson != null ? new AndroidJavaObject("java.lang.String", actionPropertiesJson) : null),
+                                 actionPropertiesString = new AndroidJavaObject("java.lang.String", actionPropertiesJson),
                                  objectInstanceIdString = new AndroidJavaObject("java.lang.String", objectInstanceId))
          {
             return mCarrot.Call<bool>("postJsonAction", actionIdString, actionPropertiesString, objectInstanceIdString);
          }
 #elif !UNITY_EDITOR
+         string actionPropertiesJson = (actionProperties == null ? null : Json.Serialize(actionProperties));
          return (Carrot_PostInstanceAction(actionId, actionPropertiesJson, objectInstanceId) == 1);
 #else
+         string actionPropertiesJson = (actionProperties == null ? "" : Json.Serialize(actionProperties));
          Debug.Log("Carrot::postAction('" + actionId + "', " + actionPropertiesJson + ", '" + objectInstanceId + "')");
          return true;
 #endif
@@ -248,20 +251,23 @@ public class Carrot : MonoBehaviour
       /// <returns><c>true</c> if the action request has been cached, and will be sent to the server; <c>false</c> otherwise.</returns>
       public bool postAction(string actionId, IDictionary actionProperties, string objectId, IDictionary objectProperties, string objectInstanceId = null)
       {
-         string actionPropertiesJson = (actionProperties == null ? null : Json.Serialize(actionProperties));
          string objectPropertiesJson = Json.Serialize(objectProperties);
 #if UNITY_ANDROID && !UNITY_EDITOR
+         if(objectInstanceId == null) objectInstanceId = "";
+         string actionPropertiesJson = (actionProperties == null ? "" : Json.Serialize(actionProperties));
          using(AndroidJavaObject actionIdString = new AndroidJavaObject("java.lang.String", actionId),
-                                 actionPropertiesString = (actionPropertiesJson != null ? new AndroidJavaObject("java.lang.String", actionPropertiesJson) : null),
+                                 actionPropertiesString = new AndroidJavaObject("java.lang.String", actionPropertiesJson),
                                  objectIdString = new AndroidJavaObject("java.lang.String", objectId),
                                  objectPropertiesString = new AndroidJavaObject("java.lang.String", objectPropertiesJson),
-                                 objectInstanceIdString = (objectInstanceId != null ? new AndroidJavaObject("java.lang.String", objectInstanceId) : null))
+                                 objectInstanceIdString = new AndroidJavaObject("java.lang.String", objectInstanceId))
          {
             return mCarrot.Call<bool>("postJsonAction", actionIdString, actionPropertiesString, objectIdString, objectPropertiesString, objectInstanceIdString);
          }
 #elif !UNITY_EDITOR
+         string actionPropertiesJson = (actionProperties == null ? null : Json.Serialize(actionProperties));
          return (Carrot_PostCreateAction(actionId, actionPropertiesJson, objectId, objectPropertiesJson, objectInstanceId) == 1);
 #else
+         string actionPropertiesJson = (actionProperties == null ? "" : Json.Serialize(actionProperties));
          Debug.Log("Carrot::postAction('" + actionId + "', " + actionPropertiesJson + ", '" + objectId + "', " + objectPropertiesJson + ")");
          return true;
 #endif
