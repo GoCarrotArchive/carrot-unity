@@ -19,11 +19,8 @@ using UnityEditor;
 using UnityEditor.Callbacks;
 using System.Collections.Generic;
 
-public static class CarrotPostBuildTrigger
+public static class CarrotPostProcessBuild
 {
-   public static string FacebookAppID = "280914862014150";
-   public static string CarrotAppSecret = "";
-
    [PostProcessBuild]
    public static void OnPostProcessBuild(BuildTarget target, string path)
    {
@@ -37,9 +34,12 @@ public static class CarrotPostBuildTrigger
             // FacebookAppID
             if(!plist.ContainsKey("FacebookAppID"))
             {
-               Debug.Log("Adding FacebookAppID to '" + plistPath + "'");
-               plist.Add("FacebookAppID", FacebookAppID);
+               plist.Add("FacebookAppID", CarrotSettings.CarrotAppId);
             }
+
+            // Change 'identifier' to 'rfc1034identifier'
+            string bundleId = (string)plist["CFBundleIdentifier"];
+            plist["CFBundleIdentifier"] = bundleId.Replace(":identifier", ":rfc1034identifier");
 
             // Facebook/Carrot URL handlers for deep-linking and < iOS6 SSO
             List<object> bundleURLArray = null;
@@ -76,17 +76,15 @@ public static class CarrotPostBuildTrigger
                urlSchemeArray = (List<object>)tempObj;
             }
 
-            string fbURLScheme = "fb" + FacebookAppID;
+            string fbURLScheme = "fb" + CarrotSettings.CarrotAppId;
             if(!urlSchemeArray.Contains(fbURLScheme))
             {
-               Debug.Log("Adding Facebook URL scheme to '" + plistPath + "'");
                urlSchemeArray.Add(fbURLScheme);
             }
 
-            string ctURLScheme = "carrot" + FacebookAppID;
+            string ctURLScheme = "carrot" + CarrotSettings.CarrotAppId;
             if(!urlSchemeArray.Contains(ctURLScheme))
             {
-               Debug.Log("Adding Carrot URL scheme to '" + plistPath + "'");
                urlSchemeArray.Add(ctURLScheme);
             }
 
@@ -109,9 +107,9 @@ public static class CarrotPostBuildTrigger
             }
             else if(line.Contains("[NSAutoreleasePool new]"))
             {
-               mainmmWriter.WriteLine("   [Carrot plant:@\"" + FacebookAppID + "\"");
+               mainmmWriter.WriteLine("   [Carrot plant:@\"" + CarrotSettings.CarrotAppId + "\"");
                mainmmWriter.WriteLine("   inApplication:NSClassFromString(@\"AppController\")");
-               mainmmWriter.WriteLine("      withSecret:@\"" + CarrotAppSecret + "\"];");
+               mainmmWriter.WriteLine("      withSecret:@\"" + CarrotSettings.CarrotAppSecret + "\"];");
             }
             else if(line.Contains("Carrot"))
             {
