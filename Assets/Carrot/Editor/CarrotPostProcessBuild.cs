@@ -133,7 +133,7 @@ public static class CarrotPostProcessBuild
          p.StartInfo.UseShellExecute = false;
          p.StartInfo.RedirectStandardOutput = true;
          p.StartInfo.FileName = "python";
-         p.StartInfo.Arguments = System.String.Format("\"{0}\" -i \"{1}\"",
+         p.StartInfo.Arguments = System.String.Format("-B \"{0}\" -i \"{1}\"",
             Application.dataPath + "/Carrot/Editor/Python/CarrotXcodeFrameworks.py",
             path + "/Unity-iPhone.xcodeproj/project.pbxproj");
          p.Start();
