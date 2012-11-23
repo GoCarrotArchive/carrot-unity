@@ -126,7 +126,20 @@ public static class CarrotPostProcessBuild
             File.Delete(mainmmPath);
             File.Move(tempMainmmPath, mainmmPath);
          }
+         #endregion
 
+         #region Modify Xcode Project
+         System.Diagnostics.Process p = new System.Diagnostics.Process();
+         p.StartInfo.UseShellExecute = false;
+         p.StartInfo.RedirectStandardOutput = true;
+         p.StartInfo.FileName = "python";
+         p.StartInfo.Arguments = System.String.Format("\"{0}\" -i \"{1}\"",
+            Application.dataPath + "/Carrot/Editor/Python/CarrotXcodeFrameworks.py",
+            path + "/Unity-iPhone.xcodeproj/project.pbxproj");
+         p.Start();
+         string output = p.StandardOutput.ReadToEnd();
+         Debug.Log(output);
+         p.WaitForExit();
          #endregion
       }
    }
