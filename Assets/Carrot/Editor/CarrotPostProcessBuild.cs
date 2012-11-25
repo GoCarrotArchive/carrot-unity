@@ -12,6 +12,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 using PlistCS;
 using System.IO;
 using UnityEngine;
@@ -97,35 +98,44 @@ public static class CarrotPostProcessBuild
          string tempMainmmPath = mainmmPath + ".tmp";
          FileStream tempMainmm = File.Open(tempMainmmPath, FileMode.Create, FileAccess.Write);
          StreamWriter mainmmWriter = new StreamWriter(tempMainmm);
-         bool moveTempMainmm = true;
+         bool mainModified = false;
          foreach(string line in File.ReadAllLines(mainmmPath))
          {
-            mainmmWriter.WriteLine(line);
-            if(line.Contains("RegisterMonoModules.h"))
+            if(line.Contains("// Carrot Modifications"))
             {
-               mainmmWriter.WriteLine("#include \"../Libraries/Carrot.h\"");
+               mainModified = true;
+               mainmmWriter.WriteLine(line);
             }
-            else if(line.Contains("[NSAutoreleasePool new]"))
+            else if(line.Contains("// Hack to work") && !mainModified)
             {
-               mainmmWriter.WriteLine("   [Carrot plant:@\"" + CarrotSettings.CarrotAppId + "\"");
+               mainmmWriter.WriteLine("// Carrot Modifications\n#include \"../Libraries/Carrot.h\"");
+               mainmmWriter.WriteLine("#define CARROT_APP_ID @\"" + CarrotSettings.CarrotAppId + "\"");
+               mainmmWriter.WriteLine("#define CARROT_APP_SECRET @\"" + CarrotSettings.CarrotAppSecret + "\"\n");
+               mainmmWriter.WriteLine(line);
+            }
+            else if(line.Contains("[NSAutoreleasePool new]") && !mainModified)
+            {
+               mainmmWriter.WriteLine(line);
+               mainmmWriter.WriteLine("   [Carrot plant:CARROT_APP_ID");
                mainmmWriter.WriteLine("   inApplication:NSClassFromString(@\"AppController\")");
-               mainmmWriter.WriteLine("      withSecret:@\"" + CarrotSettings.CarrotAppSecret + "\"];");
+               mainmmWriter.WriteLine("      withSecret:CARROT_APP_SECRET];");
             }
-            else if(line.Contains("Carrot"))
+            else if(line.Contains("#define CARROT_APP_ID"))
             {
-               mainmmWriter.Close();
-               File.Delete(tempMainmmPath);
-               moveTempMainmm = false;
-               break;
+               mainmmWriter.WriteLine("#define CARROT_APP_ID @\"" + CarrotSettings.CarrotAppId + "\"");
+            }
+            else if(line.Contains("#define CARROT_APP_SECRET"))
+            {
+               mainmmWriter.WriteLine("#define CARROT_APP_SECRET @\"" + CarrotSettings.CarrotAppSecret + "\"");
+            }
+            else
+            {
+               mainmmWriter.WriteLine(line);
             }
          }
 
-         if(moveTempMainmm)
-         {
-            mainmmWriter.Close();
-            File.Delete(mainmmPath);
-            File.Move(tempMainmmPath, mainmmPath);
-         }
+         mainmmWriter.Close();
+         FileUtil.ReplaceFile(tempMainmmPath, mainmmPath);
          #endregion
 
          #region Modify Xcode Project
