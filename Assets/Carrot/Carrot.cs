@@ -62,7 +62,20 @@ namespace CarrotInc
          get
          {
             if(mInstance == null)
+            {
                mInstance = FindObjectOfType(typeof(Carrot)) as Carrot;
+
+               if(mInstance == null)
+               {
+                  GameObject carrotGameObject = GameObject.Find("__CarrotGameObject__");
+                  if(carrotGameObject != null)
+                  {
+                     mInstance = carrotGameObject.GetComponent<Carrot>();
+                  }
+               }
+
+               if(mInstance == null) throw new NullReferenceException("No Carrot instance found in current scene!");
+            }
             return mInstance.mCarrot;
          }
       }

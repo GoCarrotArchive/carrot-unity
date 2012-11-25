@@ -12,6 +12,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 using CarrotInc;
 using UnityEngine;
 using UnityEditor;
@@ -22,17 +23,21 @@ public class CarrotPostProcessScene
    [PostProcessScene]
    public static void OnPostprocessScene()
    {
-      GameObject carrotGameObject = GameObject.Find("CarrotGameObject");
-      if(carrotGameObject == null)
-      {
-         carrotGameObject = new GameObject("CarrotGameObject");
-      }
-
-      Carrot carrot = carrotGameObject.GetComponent<Carrot>();
+      Carrot carrot = Object.FindObjectOfType(typeof(Carrot)) as Carrot;
       if(carrot == null)
       {
-         carrotGameObject.AddComponent<Carrot>();
+         GameObject carrotGameObject = GameObject.Find("__CarrotGameObject__");
+         if(carrotGameObject == null)
+         {
+            carrotGameObject =  new GameObject("__CarrotGameObject__");
+         }
+
          carrot = carrotGameObject.GetComponent<Carrot>();
+         if(carrot == null)
+         {
+            carrotGameObject.AddComponent<Carrot>();
+            carrot = carrotGameObject.GetComponent<Carrot>();
+         }
       }
 
       carrot.FacebookAppId = CarrotSettings.CarrotAppId;
