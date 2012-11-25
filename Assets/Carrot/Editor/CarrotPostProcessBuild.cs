@@ -137,8 +137,11 @@ public static class CarrotPostProcessBuild
             Application.dataPath + "/Carrot/Editor/Python/CarrotXcodeFrameworks.py",
             path + "/Unity-iPhone.xcodeproj/project.pbxproj");
          p.Start();
-         string output = p.StandardOutput.ReadToEnd();
-         Debug.Log(output);
+         string output = p.StandardOutput.ReadToEnd().Trim();
+         if(!System.String.IsNullOrEmpty(output))
+         {
+            Debug.LogWarning("Xcode Project Updated, you must save/reload the Xcode project in order for Append builds to work from Unity.\n" + output);
+         }
          p.WaitForExit();
          #endregion
       }
