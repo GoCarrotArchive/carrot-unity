@@ -12,15 +12,30 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 using System.IO;
 using UnityEngine;
 using UnityEditor;
 
-
 public class CarrotSettings : EditorWindow
 {
-   public static string CarrotAppId = "280914862014150";
-   public static string CarrotAppSecret = "aa37313c6062762980f95a0711af0537";
+   public static string CarrotAppId
+   {
+      get
+      {
+         LoadSettings();
+         return mCarrotAppId;
+      }
+   }
+
+   public static string CarrotAppSecret
+   {
+      get
+      {
+         LoadSettings();
+         return mCarrotAppSecret;
+      }
+   }
 
    [MenuItem("Edit/Carrot")]
    public static void ShowWindow()
@@ -32,18 +47,48 @@ public class CarrotSettings : EditorWindow
    void OnGUI()
    {
       GUILayout.Label("Settings", EditorStyles.boldLabel);
-      CarrotAppId = EditorGUILayout.TextField("Carrot App Id", CarrotAppId);
-      CarrotAppSecret = EditorGUILayout.TextField("Carrot App Secret", CarrotAppSecret);
+      mCarrotAppId = EditorGUILayout.TextField("Carrot App Id", mCarrotAppId);
+      mCarrotAppSecret = EditorGUILayout.TextField("Carrot App Secret", mCarrotAppSecret);
    }
 
    void OnFocus()
    {
-      Debug.Log("CarrotSettings::OnFocus");
+      LoadSettings();
    }
 
    void OnLostFocus()
    {
-      Debug.Log("CarrotSettings::OnLostFocus");
+      SaveSettings();
    }
-}
 
+   static void LoadSettings()
+   {
+      if(EditorPrefs.HasKey(ProjectName + "-CarrotAppId"))
+      {
+         mCarrotAppId = EditorPrefs.GetString(ProjectName + "-CarrotAppId");
+      }
+
+      if(EditorPrefs.HasKey(ProjectName + "-CarrotAppSecret"))
+      {
+         mCarrotAppSecret = EditorPrefs.GetString(ProjectName + "-CarrotAppSecret");
+      }
+   }
+
+   static void SaveSettings()
+   {
+      EditorPrefs.SetString(ProjectName + "-CarrotAppId", mCarrotAppId);
+      EditorPrefs.SetString(ProjectName + "-CarrotAppSecret", mCarrotAppSecret);
+   }
+
+   static string ProjectName
+   {
+      get
+      {
+         string[] dp = Application.dataPath.Split('/');
+         return dp[dp.Length - 2];
+      }
+   }
+
+   static string mCarrotAppId = "";
+   static string mCarrotAppSecret = "";
+}
