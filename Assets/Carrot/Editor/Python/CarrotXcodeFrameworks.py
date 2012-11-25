@@ -39,22 +39,19 @@ def main(argv):
     for framework in frameworks:
         framework_path = 'System/Library/Frameworks/{0}.framework'.format(framework)
         if not project.get_files_by_os_path(framework_path, tree='SDKROOT'):
-            print 'Adding \'{0}\''.format(framework_path)
+            print 'Added \'{0}\''.format(framework_path)
             project.add_file(framework_path, tree='SDKROOT')
 
     usr_libs = ['libsqlite3']
     for usr_lib in usr_libs:
         usr_lib_path = 'usr/lib/{0}.dylib'.format(usr_lib)
         if not project.get_files_by_os_path(usr_lib_path, tree='SDKROOT'):
-            print 'Adding \'{0}\''.format(usr_lib_path)
+            print 'Added \'{0}\''.format(usr_lib_path)
             project.add_file(usr_lib_path, tree='SDKROOT')
 
     if project.modified:
         if outputfile == None:
-            print 'Xcode project updated.'
             project.backup()
-        else:
-            print 'Xcode project saved to \'{0}\''.format(outputfile)
         project.save(outputfile)
 
 if __name__ == "__main__":
