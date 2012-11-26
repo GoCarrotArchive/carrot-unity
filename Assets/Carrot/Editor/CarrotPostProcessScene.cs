@@ -13,7 +13,6 @@
  * limitations under the License.
  */
 
-using CarrotInc;
 using UnityEngine;
 using UnityEditor;
 using UnityEditor.Callbacks;
