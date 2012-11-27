@@ -25,18 +25,13 @@ public class CarrotPostProcessScene
       Carrot carrot = Object.FindObjectOfType(typeof(Carrot)) as Carrot;
       if(carrot == null)
       {
-         GameObject carrotGameObject = GameObject.Find("__CarrotGameObject__");
+         GameObject carrotGameObject = GameObject.Find("CarrotGameObject");
          if(carrotGameObject == null)
          {
-            carrotGameObject =  new GameObject("__CarrotGameObject__");
+            Object prefab = AssetDatabase.LoadAssetAtPath("Assets/Carrot/CarrotGameObject.prefab", typeof(GameObject));
+            carrotGameObject =  PrefabUtility.InstantiatePrefab(prefab as GameObject) as GameObject;
          }
-
          carrot = carrotGameObject.GetComponent<Carrot>();
-         if(carrot == null)
-         {
-            carrotGameObject.AddComponent<Carrot>();
-            carrot = carrotGameObject.GetComponent<Carrot>();
-         }
       }
 
       carrot.FacebookAppId = CarrotSettings.CarrotAppId;

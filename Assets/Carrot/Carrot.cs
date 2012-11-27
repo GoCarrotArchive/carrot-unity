@@ -65,7 +65,7 @@ public class Carrot : MonoBehaviour
 
             if(mInstance == null)
             {
-               GameObject carrotGameObject = GameObject.Find("__CarrotGameObject__");
+               GameObject carrotGameObject = GameObject.Find("CarrotGameObject");
                if(carrotGameObject != null)
                {
                   mInstance = carrotGameObject.GetComponent<Carrot>();

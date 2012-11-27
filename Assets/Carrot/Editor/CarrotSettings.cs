@@ -49,16 +49,49 @@ public class CarrotSettings : EditorWindow
       GUILayout.Label("Settings", EditorStyles.boldLabel);
       mCarrotAppId = EditorGUILayout.TextField("Carrot App Id", mCarrotAppId);
       mCarrotAppSecret = EditorGUILayout.TextField("Carrot App Secret", mCarrotAppSecret);
+
+      if(mCarrotGameObject != null)
+      {
+         if(GUILayout.Button("Create Carrot GameObject", GUILayout.Height(25)))
+         {
+            mCarrotGameObject = GameObject.Find("CarrotGameObject");
+            if(mCarrotGameObject == null)
+            {
+               Object prefab = AssetDatabase.LoadAssetAtPath("Assets/Carrot/CarrotGameObject.prefab", typeof(GameObject));
+               mCarrotGameObject =  PrefabUtility.InstantiatePrefab(prefab as GameObject) as GameObject;
+            }
+            UpdateCarrotGameObject();
+         }
+      }
+   }
+
+   void UpdateCarrotGameObject()
+   {
+      mCarrotGameObject = GameObject.Find("CarrotGameObject");
+      if(mCarrotGameObject)
+      {
+         Carrot carrot = mCarrotGameObject.GetComponent<Carrot>();
+         carrot.FacebookAppId = mCarrotAppId;
+         carrot.CarrotAppSecret = mCarrotAppSecret;
+      }
    }
 
    void OnFocus()
    {
       LoadSettings();
+      UpdateCarrotGameObject();
+   }
+
+   void OnSelectionChange()
+   {
+      SaveSettings();
+      UpdateCarrotGameObject();
    }
 
    void OnLostFocus()
    {
       SaveSettings();
+      UpdateCarrotGameObject();
    }
 
    static void LoadSettings()
@@ -91,4 +124,5 @@ public class CarrotSettings : EditorWindow
 
    static string mCarrotAppId = "";
    static string mCarrotAppSecret = "";
+   GameObject mCarrotGameObject = null;
 }
