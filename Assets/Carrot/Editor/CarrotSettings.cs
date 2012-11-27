@@ -96,15 +96,8 @@ public class CarrotSettings : EditorWindow
 
    static void LoadSettings()
    {
-      if(EditorPrefs.HasKey(ProjectName + "-CarrotAppId"))
-      {
-         mCarrotAppId = EditorPrefs.GetString(ProjectName + "-CarrotAppId");
-      }
-
-      if(EditorPrefs.HasKey(ProjectName + "-CarrotAppSecret"))
-      {
-         mCarrotAppSecret = EditorPrefs.GetString(ProjectName + "-CarrotAppSecret");
-      }
+      mCarrotAppId = EditorPrefs.GetString(ProjectName + "-CarrotAppId");
+      mCarrotAppSecret = EditorPrefs.GetString(ProjectName + "-CarrotAppSecret");
    }
 
    static void SaveSettings()
