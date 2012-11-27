@@ -98,10 +98,8 @@ namespace :unity do
     # Build .unitypackage
     project_path = File.expand_path("./")
     package_path = File.expand_path("./Carrot.unitypackage")
-    mv "#{project_path}/Assets/Main\ Scene.unity", "#{project_path}/Main\ Scene.unity"
-    mv "#{project_path}/Assets/MainMenu.cs", "#{project_path}/MainMenu.cs"
+    mv "#{project_path}/Assets/Example", "#{project_path}/Assets/.Example"
     unity "-quit -batchmode -projectPath #{project_path} -exportPackage Assets #{package_path}"
-    mv "#{project_path}/Main\ Scene.unity", "#{project_path}/Assets/Main\ Scene.unity"
-    mv "#{project_path}/MainMenu.cs", "#{project_path}/Assets/MainMenu.cs"
+    mv "#{project_path}/Assets/.Example", "#{project_path}/Assets/Example"
   end
 end
