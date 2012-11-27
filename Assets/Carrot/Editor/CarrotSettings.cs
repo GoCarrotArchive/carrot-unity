@@ -50,7 +50,7 @@ public class CarrotSettings : EditorWindow
       mCarrotAppId = EditorGUILayout.TextField("Carrot App Id", mCarrotAppId);
       mCarrotAppSecret = EditorGUILayout.TextField("Carrot App Secret", mCarrotAppSecret);
 
-      if(mCarrotGameObject != null)
+      if(!CarrotPostProcessScene.WillCreatePrefab)
       {
          if(GUILayout.Button("Create Carrot GameObject", GUILayout.Height(25)))
          {

@@ -25,16 +25,47 @@ public class CarrotPostProcessScene
       Carrot carrot = Object.FindObjectOfType(typeof(Carrot)) as Carrot;
       if(carrot == null)
       {
-         GameObject carrotGameObject = GameObject.Find("CarrotGameObject");
-         if(carrotGameObject == null)
+         if(CarrotPostProcessScene.WillCreatePrefab)
          {
-            Object prefab = AssetDatabase.LoadAssetAtPath("Assets/Carrot/CarrotGameObject.prefab", typeof(GameObject));
-            carrotGameObject =  PrefabUtility.InstantiatePrefab(prefab as GameObject) as GameObject;
+            GameObject carrotGameObject = GameObject.Find("CarrotGameObject");
+            if(carrotGameObject == null)
+            {
+               Object prefab = AssetDatabase.LoadAssetAtPath("Assets/Carrot/CarrotGameObject.prefab", typeof(GameObject));
+               carrotGameObject =  PrefabUtility.InstantiatePrefab(prefab as GameObject) as GameObject;
+            }
+            carrot = carrotGameObject.GetComponent<Carrot>();
          }
-         carrot = carrotGameObject.GetComponent<Carrot>();
+         else
+         {
+            Debug.LogWarning("No Carrot prefab found in: '" + EditorApplication.currentScene + "'");
+         }
       }
 
-      carrot.FacebookAppId = CarrotSettings.CarrotAppId;
-      carrot.CarrotAppSecret = CarrotSettings.CarrotAppSecret;
+      if(carrot != null)
+      {
+         if(CarrotPostProcessScene.WillCreatePrefab)
+         {
+            carrot.FacebookAppId = CarrotSettings.CarrotAppId;
+            carrot.CarrotAppSecret = CarrotSettings.CarrotAppSecret;
+         }
+         else if(carrot.FacebookAppId != CarrotSettings.CarrotAppId ||
+                 carrot.CarrotAppSecret != CarrotSettings.CarrotAppSecret)
+         {
+            Debug.LogWarning("Carrot prefab in: '" + EditorApplication.currentScene + "' has different credentials than the Carrot Settings in the Editor.");
+         }
+      }
+   }
+
+   public static bool WillCreatePrefab
+   {
+      get
+      {
+         // https://fogbugz.unity3d.com/default.asp?501928_jte739hnp32m9ebb
+#if UNITY_X_X_VERSION_WHEN_BUG_FIXED
+         return true;
+#else
+         return false;
+#endif
+      }
    }
 }
