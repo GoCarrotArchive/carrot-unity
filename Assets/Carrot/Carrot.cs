@@ -205,87 +205,6 @@ public class Carrot : MonoBehaviour
       }
 
       /// <summary>
-      /// Sends an Open Graph action which will use an existing object.
-      /// </summary>
-      /// <param name="actionId">Carrot action id.</param>
-      /// <param name="objectInstanceId">Carrot object instance id.</param>
-      public bool postAction(string actionId, string objectInstanceId)
-      {
-         return postAction(actionId, null, objectInstanceId);
-      }
-
-      /// <summary>
-      /// Sends an Open Graph action which will use an existing object.
-      /// </summary>
-      /// <param name="actionId">Carrot action id.</param>
-      /// <param name="actionProperties">Parameters to be submitted with the action.</param>
-      /// <param name="objectInstanceId">Carrot object instance id.</param>
-      public bool postAction(string actionId, IDictionary actionProperties, string objectInstanceId)
-      {
-#if UNITY_ANDROID && !UNITY_EDITOR
-         string actionPropertiesJson = (actionProperties == null ? "" : Json.Serialize(actionProperties));
-         using(AndroidJavaObject actionIdString = new AndroidJavaObject("java.lang.String", actionId),
-                                 actionPropertiesString = new AndroidJavaObject("java.lang.String", actionPropertiesJson),
-                                 objectInstanceIdString = new AndroidJavaObject("java.lang.String", objectInstanceId))
-         {
-            return mCarrot.Call<bool>("postJsonAction", actionIdString, actionPropertiesString, objectInstanceIdString);
-         }
-#elif !UNITY_EDITOR
-         string actionPropertiesJson = (actionProperties == null ? null : Json.Serialize(actionProperties));
-         return (Carrot_PostInstanceAction(actionId, actionPropertiesJson, objectInstanceId) == 1);
-#else
-         string actionPropertiesJson = (actionProperties == null ? "" : Json.Serialize(actionProperties));
-         Debug.Log("Carrot::postAction('" + actionId + "', " + actionPropertiesJson + ", '" + objectInstanceId + "')");
-         return true;
-#endif
-      }
-
-      /// <summary>
-      /// Sends an Open Graph action which will create a new object from the properties provided.
-      /// </summary>
-      /// <param name="actionId">Carrot action id.</param>
-      /// <param name="objectId">Carrot object id.</param>
-      /// <param name="objectProperties">Parameters to be submitted with the action.</param>
-      /// <param name="objectInstanceId">Object instance id to create or re-use.</param>
-      public bool postAction(string actionId, string objectId, IDictionary objectProperties, string objectInstanceId = null)
-      {
-         return postAction(actionId, null, objectId, objectProperties, objectInstanceId);
-      }
-
-      /// <summary>
-      /// Sends an Open Graph action which will create a new object from the properties provided.
-      /// </summary>
-      /// <param name="actionId">Carrot action id.</param>
-      /// <param name="actionProperties">Parameters to be submitted with the action.</param>
-      /// <param name="objectId">Carrot object id.</param>
-      /// <param name="objectProperties">Parameters to be submitted with the action.</param>
-      /// <param name="objectInstanceId">Object instance id to create or re-use.</param>
-      /// <returns><c>true</c> if the action request has been cached, and will be sent to the server; <c>false</c> otherwise.</returns>
-      public bool postAction(string actionId, IDictionary actionProperties, string objectId, IDictionary objectProperties, string objectInstanceId = null)
-      {
-         string objectPropertiesJson = Json.Serialize(objectProperties);
-#if UNITY_ANDROID && !UNITY_EDITOR
-         if(objectInstanceId == null) objectInstanceId = "";
-         string actionPropertiesJson = (actionProperties == null ? "" : Json.Serialize(actionProperties));
-         using(AndroidJavaObject actionIdString = new AndroidJavaObject("java.lang.String", actionId),
-                                 actionPropertiesString = new AndroidJavaObject("java.lang.String", actionPropertiesJson),
-                                 objectIdString = new AndroidJavaObject("java.lang.String", objectId),
-                                 objectPropertiesString = new AndroidJavaObject("java.lang.String", objectPropertiesJson),
-                                 objectInstanceIdString = new AndroidJavaObject("java.lang.String", objectInstanceId))
-         {
-            return mCarrot.Call<bool>("postJsonAction", actionIdString, actionPropertiesString, objectIdString, objectPropertiesString, objectInstanceIdString);
-         }
-#elif !UNITY_EDITOR
-         string actionPropertiesJson = (actionProperties == null ? null : Json.Serialize(actionProperties));
-         return (Carrot_PostCreateAction(actionId, actionPropertiesJson, objectId, objectPropertiesJson, objectInstanceId) == 1);
-#else
-         string actionPropertiesJson = (actionProperties == null ? "" : Json.Serialize(actionProperties));
-         Debug.Log("Carrot::postAction('" + actionId + "', " + actionPropertiesJson + ", '" + objectId + "', " + objectPropertiesJson + ")");
-         return true;
-#endif
-      }
-
-      /// <summary>
       /// Post a 'Like' action that likes the Game's Facebook Page.
       /// </summary>
       /// <returns><c>true</c> if the action request has been cached, and will be sent to the server; <c>false</c> otherwise.</returns>
@@ -297,62 +216,6 @@ public class Carrot : MonoBehaviour
          return (Carrot_LikeGame() == 1);
 #else
          Debug.Log("Carrot::likeGame()");
-         return true;
-#endif
-      }
-
-      /// <summary>
-      /// Post a 'Like' action that likes the Publisher's Facebook Page.
-      /// </summary>
-      /// <returns><c>true</c> if the action request has been cached, and will be sent to the server; <c>false</c> otherwise.</returns>
-      public bool likePublisher()
-      {
-#if UNITY_ANDROID && !UNITY_EDITOR
-         return mCarrot.Call<bool>("likePublisher");
-#elif !UNITY_EDITOR
-         return (Carrot_LikePublisher() == 1);
-#else
-         Debug.Log("Carrot::likePublisher()");
-         return true;
-#endif
-      }
-
-      /// <summary>
-      /// Post a 'Like' action that likes an achievement.
-      /// </summary>
-      /// <param name="achievementId">The achievement identifier.</param>
-      /// <returns><c>true</c> if the action request has been cached, and will be sent to the server; <c>false</c> otherwise.</returns>
-      public bool likeAchievement(string achievementId)
-      {
-#if UNITY_ANDROID && !UNITY_EDITOR
-         using(AndroidJavaObject achievementIdString = new AndroidJavaObject("java.lang.String", achievementId))
-         {
-            return mCarrot.Call<bool>("likeAchievement", achievementIdString);
-         }
-#elif !UNITY_EDITOR
-         return (Carrot_LikeAchievement(achievementId) == 1);
-#else
-         Debug.Log("Carrot::likeAchievement('" + achievementId + "')");
-         return true;
-#endif
-      }
-
-      /// <summary>
-      /// Post a 'Like' action that likes an Open Graph object.
-      /// </summary>
-      /// <param name="objectId">The instance id of the Carrot object.</param>
-      /// <returns><c>true</c> if the action request has been cached, and will be sent to the server; <c>false</c> otherwise.</returns>
-      public bool likeObject(string objectId)
-      {
-#if UNITY_ANDROID && !UNITY_EDITOR
-         using(AndroidJavaObject objectIdString = new AndroidJavaObject("java.lang.String", objectId))
-         {
-            return mCarrot.Call<bool>("likeObject", objectIdString);
-         }
-#elif !UNITY_EDITOR
-         return (Carrot_LikeObject(objectId) == 1);
-#else
-         Debug.Log("Carrot::likeObject('" + objectId + "')");
          return true;
 #endif
       }
@@ -452,20 +315,6 @@ public class Carrot : MonoBehaviour
          [MarshalAs(UnmanagedType.LPStr)] string leaderboardId);
 
       [DllImport(DLL_IMPORT_TARGET)]
-      private extern static int Carrot_PostInstanceAction(
-         [MarshalAs(UnmanagedType.LPStr)] string actionId,
-         [MarshalAs(UnmanagedType.LPStr)] string actionPropertiesJson,
-         [MarshalAs(UnmanagedType.LPStr)] string objectInstanceId);
-
-      [DllImport(DLL_IMPORT_TARGET)]
-      private extern static int Carrot_PostCreateAction(
-         [MarshalAs(UnmanagedType.LPStr)] string actionId,
-         [MarshalAs(UnmanagedType.LPStr)] string actionPropertiesJson,
-         [MarshalAs(UnmanagedType.LPStr)] string objectId,
-         [MarshalAs(UnmanagedType.LPStr)] string objectPropertiesJson,
-         [MarshalAs(UnmanagedType.LPStr)] string objectInstanceId);
-
-      [DllImport(DLL_IMPORT_TARGET)]
       private extern static int Carrot_DoFacebookAuth(
          int allowLoginUI, int permission);
 
@@ -475,18 +324,6 @@ public class Carrot : MonoBehaviour
 
       [DllImport(DLL_IMPORT_TARGET)]
       private extern static int Carrot_LikeGame();
-
-      [DllImport(DLL_IMPORT_TARGET)]
-      private extern static int Carrot_LikePublisher();
-
-      [DllImport(DLL_IMPORT_TARGET)]
-      private extern static int Carrot_LikeAchievement(
-         [MarshalAs(UnmanagedType.LPStr)] string achievementId);
-
-      [DllImport(DLL_IMPORT_TARGET)]
-      private extern static int Carrot_LikeObject(
-         [MarshalAs(UnmanagedType.LPStr)] string objectId);
-
       #endregion
 #endif
 
