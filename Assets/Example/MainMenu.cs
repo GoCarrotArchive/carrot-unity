@@ -3,7 +3,7 @@ using System.Collections;
 
 public class MainMenu : MonoBehaviour
 {
-   public int buttonHeight = 20;
+   public int buttonHeight = 50;
    public int buttonWidth = 200;
    public int buttonSpacing = 8;
 
