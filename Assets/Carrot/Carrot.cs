@@ -286,6 +286,78 @@ public class Carrot : MonoBehaviour
       }
 
       /// <summary>
+      /// Post a 'Like' action that likes the Game's Facebook Page.
+      /// </summary>
+      /// <returns><c>true</c> if the action request has been cached, and will be sent to the server; <c>false</c> otherwise.</returns>
+      public bool likeGame()
+      {
+#if UNITY_ANDROID && !UNITY_EDITOR
+         return mCarrot.Call<bool>("likeGame");
+#elif !UNITY_EDITOR
+         return (Carrot_LikeGame() == 1);
+#else
+         Debug.Log("Carrot::likeGame()");
+         return true;
+#endif
+      }
+
+      /// <summary>
+      /// Post a 'Like' action that likes the Publisher's Facebook Page.
+      /// </summary>
+      /// <returns><c>true</c> if the action request has been cached, and will be sent to the server; <c>false</c> otherwise.</returns>
+      public bool likePublisher()
+      {
+#if UNITY_ANDROID && !UNITY_EDITOR
+         return mCarrot.Call<bool>("likePublisher");
+#elif !UNITY_EDITOR
+         return (Carrot_LikePublisher() == 1);
+#else
+         Debug.Log("Carrot::likePublisher()");
+         return true;
+#endif
+      }
+
+      /// <summary>
+      /// Post a 'Like' action that likes an achievement.
+      /// </summary>
+      /// <param name="achievementId">The achievement identifier.</param>
+      /// <returns><c>true</c> if the action request has been cached, and will be sent to the server; <c>false</c> otherwise.</returns>
+      public bool likeAchievement(string achievementId)
+      {
+#if UNITY_ANDROID && !UNITY_EDITOR
+         using(AndroidJavaObject achievementIdString = new AndroidJavaObject("java.lang.String", achievementId))
+         {
+            return mCarrot.Call<bool>("likeAchievement", achievementIdString);
+         }
+#elif !UNITY_EDITOR
+         return (Carrot_LikeAchievement(achievementId) == 1);
+#else
+         Debug.Log("Carrot::likeAchievement('" + achievementId + "')");
+         return true;
+#endif
+      }
+
+      /// <summary>
+      /// Post a 'Like' action that likes an Open Graph object.
+      /// </summary>
+      /// <param name="objectId">The instance id of the Carrot object.</param>
+      /// <returns><c>true</c> if the action request has been cached, and will be sent to the server; <c>false</c> otherwise.</returns>
+      public bool likeObject(string objectId)
+      {
+#if UNITY_ANDROID && !UNITY_EDITOR
+         using(AndroidJavaObject objectIdString = new AndroidJavaObject("java.lang.String", objectId))
+         {
+            return mCarrot.Call<bool>("likeObject", objectIdString);
+         }
+#elif !UNITY_EDITOR
+         return (Carrot_LikeObject(objectId) == 1);
+#else
+         Debug.Log("Carrot::likeObject('" + objectId + "')");
+         return true;
+#endif
+      }
+
+      /// <summary>
       /// Perform Facebook Authentication.
       /// </summary>
       /// <param name="allowLoginUI">(iOS only) Allow the login UI to be shown if the Application is not authenticated.</param>
@@ -400,6 +472,20 @@ public class Carrot : MonoBehaviour
       [DllImport(DLL_IMPORT_TARGET)]
       private extern static void Carrot_AssignUnityDelegate(
          [MarshalAs(UnmanagedType.LPStr)] string objectName);
+
+      [DllImport(DLL_IMPORT_TARGET)]
+      private extern static int Carrot_LikeGame();
+
+      [DllImport(DLL_IMPORT_TARGET)]
+      private extern static int Carrot_LikePublisher();
+
+      [DllImport(DLL_IMPORT_TARGET)]
+      private extern static int Carrot_LikeAchievement(
+         [MarshalAs(UnmanagedType.LPStr)] string achievementId);
+
+      [DllImport(DLL_IMPORT_TARGET)]
+      private extern static int Carrot_LikeObject(
+         [MarshalAs(UnmanagedType.LPStr)] string objectId);
 
       #endregion
 #endif
