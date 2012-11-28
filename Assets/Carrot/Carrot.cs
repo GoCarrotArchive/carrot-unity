@@ -21,7 +21,7 @@ using System.Collections.Generic;
 using System.Runtime.InteropServices;
 
 /// <summary>
-/// A <see cref="UnityEngine.MonoBehaviour"/> which can be attached to a Unity <see cref="UnityEngine.GameObject"/>
+/// A MonoBehaviour which can be attached to a Unity GameObject
 /// to provide singleton access to a <see cref="Carrot.CarrotBridge"/>.
 /// </summary>
 public class Carrot : MonoBehaviour
@@ -36,18 +36,49 @@ public class Carrot : MonoBehaviour
    /// </summary>
    public string CarrotAppSecret;
 
+   /// <summary>
+   /// Represents a Carrot authentication status for a user.
+   /// </summary>
+   /// <remarks>
+   /// This value can be obtained using the <see cref="CarrotBridge.Status"/> property. You will
+   /// also be notified of any change in authentication status by signing up for the
+   /// <see cref="CarrotBridge.AuthenticationStatusChangedHandler"/> event.
+   /// <p>
+   /// Note that even though the status may not be <see cref="AuthStatus.Ready"/> Carrot will
+   /// store the scores, achievements, and likes in a client-side cache and they will be sent
+   /// when the authentication status is <see cref="AuthStatus.Ready"/>.
+   /// </remarks>
    public enum AuthStatus : int
    {
+      /// <summary>The current user has not yet authorized the app, or has deauthorized the app.</summary>
       NotAuthorized = -1,
+
+      /// <summary>The current authentication status has not been determined.</summary>
       Undetermined = 0,
+
+      /// <summary>The current user has not granted the 'publish_actions' permission, or has removed the permission.</summary>
       ReadOnly = 1,
+
+      /// <summary>The current user has granted all needed permissions and Carrot will send events to the Carrot server.</summary>
       Ready = 2
    }
 
+   /// <summary>
+   /// The kind of authentication status to request for Facebook SSO (iOS only).
+   /// </summary>
+   /// <remarks>
+   /// For best practices information about Facebook SSO on iOS see: https://developers.facebook.com/blog/post/640/
+   /// </remarks>
    public enum FacebookAuthPermission : int
    {
+      /// <summary>Read-only permissions.</summary>
       Read = 0,
+
+      /// <summary>The 'publish_actions' permission required for Carrot.</summary>
       PublishActions = 1,
+
+      /// <summary>Request both read permissions and 'publish_actions' at the same time.</summary>
+      /// <remarks>Note that this will fall back to iOS < 6 Facebook SSO.</remarks>
       ReadWrite = 2 // Will fall back to iOS < 6 Facebook SSO
    }
 
@@ -78,6 +109,10 @@ public class Carrot : MonoBehaviour
       }
    }
 
+   /// <summary>
+   /// Return the string value of an <see cref="AuthStatus"/> value.
+   /// </summary>
+   /// <returns>The string description of an <see cref="AuthStatus"/>.</returns>
    public static string authStatusString(AuthStatus authStatus)
    {
       switch(authStatus)
@@ -90,10 +125,31 @@ public class Carrot : MonoBehaviour
       }
    }
 
+   /// <summary>
+   /// The delegate type for the <see cref="AuthenticationStatusChanged"/> event.
+   /// </summary>
+   /// <param name="sender">The object which dispatched the <see cref="AuthenticationStatusChanged"/> event.</param>
+   /// <param name="status">The new authentication status.</param>
    public delegate void AuthenticationStatusChangedHandler(object sender, AuthStatus status);
+
+   /// <summary>
+   /// The delegate type for the <see cref="ApplicationLinkRecieved"/> event.
+   /// </summary>
+   /// <param name="sender">The object which dispatched the <see cref="ApplicationLinkRecieved"/> event.</param>
+   /// <param name="targetURL">The target URL specified by the deep-link.</param>
    public delegate void ApplicationLinkRecievedHandler(object sender, string targetURL);
 
+   /// <summary>
+   /// An event which will notify listeners when the authentication status for the Carrot user has changed.
+   /// </summary>
    public static event AuthenticationStatusChangedHandler AuthenticationStatusChanged;
+
+   /// <summary>
+   /// An event which will notify listeners when the application recieves a deep-link from Facebook.
+   /// </summary>
+   /// <remarks>
+   /// For more information about deep-linking see: https://developers.facebook.com/blog/post/2012/02/21/improving-app-distribution-on-ios/
+   /// </remarks>
    public static event ApplicationLinkRecievedHandler ApplicationLinkRecieved;
 
    /// <summary>
@@ -131,7 +187,7 @@ public class Carrot : MonoBehaviour
       /// <summary>
       /// Check the authentication status of the current Carrot user.
       /// </summary>
-      /// <value><c>true</c> if Carrot is authenticated and sending requests; <c>false</c> otherwise.</value>
+      /// <value>The <see cref="AuthStatus"/> of the current Carrot user.</value>
       public AuthStatus Status
       {
          get
@@ -185,7 +241,7 @@ public class Carrot : MonoBehaviour
       /// <summary>
       /// Post a high score to Carrot.
       /// </summary>
-      /// <param name="achievementId">Score.</param>
+      /// <param name="score">Score.</param>
       /// <param name="leaderboardId">Leaderboard Id.</param>
       /// <returns><c>true</c> if the high score request has been cached, and will be sent to the server; <c>false</c> otherwise.</returns>
       public bool postHighScore(uint score, string leaderboardId = null)
@@ -260,6 +316,7 @@ public class Carrot : MonoBehaviour
 #endif
       }
 
+      /// @cond hide_from_doxygen
       #region IDisposable
       public void Dispose()
       {
@@ -291,6 +348,7 @@ public class Carrot : MonoBehaviour
          Dispose(false);
       }
       #endregion
+      /// @endcond
 
 #if !UNITY_ANDROID && !UNITY_EDITOR
       #region Dll Imports
@@ -365,6 +423,7 @@ public class Carrot : MonoBehaviour
    }
    #endregion
 
+   /// @cond hide_from_doxygen
    #region UnitySendMessage Handlers
    public void authenticationStatusChanged(string message)
    {
@@ -388,6 +447,7 @@ public class Carrot : MonoBehaviour
       }
    }
    #endregion
+   /// @endcond
 
    #region Member Variables
    private CarrotBridge mCarrot;

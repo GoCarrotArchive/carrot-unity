@@ -30,6 +30,20 @@ def unity?
   File.exist? "/Applications/Unity/Unity.app/Contents/MacOS/Unity"
 end
 
+# Docs task
+DOXYGEN_BINARY = "/Applications/Doxygen.app/Contents/Resources/doxygen"
+
+def doxygen?
+  return if not File.exist?(DOXYGEN_BINARY)
+  return true
+end
+
+if doxygen?
+  task :docs do
+    sh DOXYGEN_BINARY
+  end
+end
+
 #
 # Android build tasks
 #
