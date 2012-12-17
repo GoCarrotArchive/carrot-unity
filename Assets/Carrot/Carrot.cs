@@ -133,11 +133,11 @@ public class Carrot : MonoBehaviour
    public delegate void AuthenticationStatusChangedHandler(object sender, AuthStatus status);
 
    /// <summary>
-   /// The delegate type for the <see cref="ApplicationLinkRecieved"/> event.
+   /// The delegate type for the <see cref="ApplicationLinkReceived"/> event.
    /// </summary>
-   /// <param name="sender">The object which dispatched the <see cref="ApplicationLinkRecieved"/> event.</param>
+   /// <param name="sender">The object which dispatched the <see cref="ApplicationLinkReceived"/> event.</param>
    /// <param name="targetURL">The target URL specified by the deep-link.</param>
-   public delegate void ApplicationLinkRecievedHandler(object sender, string targetURL);
+   public delegate void ApplicationLinkReceivedHandler(object sender, string targetURL);
 
    /// <summary>
    /// An event which will notify listeners when the authentication status for the Carrot user has changed.
@@ -150,7 +150,7 @@ public class Carrot : MonoBehaviour
    /// <remarks>
    /// For more information about deep-linking see: https://developers.facebook.com/blog/post/2012/02/21/improving-app-distribution-on-ios/
    /// </remarks>
-   public static event ApplicationLinkRecievedHandler ApplicationLinkRecieved;
+   public static event ApplicationLinkReceivedHandler ApplicationLinkReceived;
 
    /// <summary>
    /// A C# bridge to the native Carrot SDK.
@@ -604,11 +604,11 @@ public class Carrot : MonoBehaviour
       }
    }
 
-   public void applicationLinkRecieved(string message)
+   public void applicationLinkReceived(string message)
    {
-      if(ApplicationLinkRecieved != null)
+      if(ApplicationLinkReceived != null)
       {
-         ApplicationLinkRecieved(this, message);
+         ApplicationLinkReceived(this, message);
       }
    }
    #endregion
