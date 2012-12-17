@@ -446,10 +446,11 @@ public class Carrot : MonoBehaviour
 
       internal void setDelegateObject(MonoBehaviour delegateObject)
       {
+         mDelegateObject = delegateObject;
 #if UNITY_ANDROID && !UNITY_EDITOR
-         mCarrot.Call("setUnityHandler", delegateObject.name);
+         mCarrot.Call("setUnityHandler", mDelegateObject.name);
 #elif !UNITY_EDITOR
-         Carrot_AssignUnityDelegate(delegateObject.name);
+         Carrot_AssignUnityDelegate(mDelegateObject.name);
 #endif
       }
 
@@ -553,6 +554,7 @@ public class Carrot : MonoBehaviour
       AndroidJavaObject mCarrot;
 #endif
       bool mIsDisposed;
+      MonoBehaviour mDelegateObject;
       #endregion
    }
 
