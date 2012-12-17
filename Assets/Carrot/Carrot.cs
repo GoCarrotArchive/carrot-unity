@@ -140,6 +140,13 @@ public class Carrot : MonoBehaviour
    public delegate void ApplicationLinkReceivedHandler(object sender, string targetURL);
 
    /// <summary>
+   /// The delegate type for the <see cref="UserAchievementListReceived"/> event.
+   /// </summary>
+   /// <param name="sender">The object which dispatched the <see cref="UserAchievementListReceived"/> event.</param>
+   /// <param name="achievements">The achievements which the current Carrot user has earned.</param>
+   public delegate void UserAchievementListReceivedHandler(object sender, IList<Achievement> achievements, string errors);
+
+   /// <summary>
    /// An event which will notify listeners when the authentication status for the Carrot user has changed.
    /// </summary>
    public static event AuthenticationStatusChangedHandler AuthenticationStatusChanged;
@@ -151,6 +158,36 @@ public class Carrot : MonoBehaviour
    /// For more information about deep-linking see: https://developers.facebook.com/blog/post/2012/02/21/improving-app-distribution-on-ios/
    /// </remarks>
    public static event ApplicationLinkReceivedHandler ApplicationLinkReceived;
+
+   /// <summary>
+   /// An event which will notify listeners when the list of user achievements has been received.
+   /// </summary>
+   public static event UserAchievementListReceivedHandler UserAchievementListReceived;
+
+   /// <summary>
+   /// C# Representation of a Carrot Achievement
+   /// </summary>
+   public class Achievement
+   {
+      public string Description;
+      public string Identifier;
+      public string ImageUrl;
+      public string Title;
+
+      public Achievement(IDictionary<string, object> fromJson)
+      {
+         Description = fromJson["description"] as string;
+         Identifier = fromJson["identifier"] as string;
+         ImageUrl = fromJson["image_url"] as string;
+         Title = fromJson["title"] as string;
+      }
+
+      public override string ToString()
+      {
+         return string.Format("identifier: '{0}', title: '{1}', image: '{2}', description: '{3}'",
+            Identifier, Title, ImageUrl, Description);
+      }
+   }
 
    /// <summary>
    /// A C# bridge to the native Carrot SDK.
@@ -235,6 +272,22 @@ public class Carrot : MonoBehaviour
 #else
          Debug.Log("Carrot:postAchievement('" + achievementId + "')");
          return true;
+#endif
+      }
+
+      /// <summary>
+      /// Get the list of achievements the current Carrot user has earned.
+      /// </summary>
+      public void getUserAchievements()
+      {
+#if UNITY_ANDROID && !UNITY_EDITOR
+         mCarrot.Call("getUserAchievementsUnity", mDelegateObject.name);
+//#elif !UNITY_EDITOR
+         // TODO: iOS
+         //(Carrot_PostAchievement(achievementId) == 1);
+#else
+         Debug.Log("Carrot:getUserAchievements()");
+         mDelegateObject.SendMessage("userAchievementListReceived", "{\"code\":200,\"data\":[{\"description\":\"\\\"That\'s not how a chicken dances, chickens don\'t clap!\\\"\",\"identifier\":\"chicken\",\"image_url\":\"https://d2h7sc2qwu171k.cloudfront.net/assets/gob-bluth-gif-7-1.gif\",\"points\":10,\"title\":\"Chicken\"},{\"description\":\"Here drink this, now write the check.\",\"identifier\":\"funded\",\"image_url\":\"https://d2h7sc2qwu171k.cloudfront.net/assets/1eyhp.gif\",\"points\":20,\"title\":\"Funded\"}]}");
 #endif
       }
 
@@ -609,6 +662,51 @@ public class Carrot : MonoBehaviour
       if(ApplicationLinkReceived != null)
       {
          ApplicationLinkReceived(this, message);
+      }
+   }
+
+   public void userAchievementListReceived(string message)
+   {
+      Dictionary<string, object> reply = Json.Deserialize(message) as Dictionary<string, object>;
+      List<Achievement> achievements = new List<Achievement>();
+
+      if(reply.ContainsKey("data"))
+      {
+         List<object> achievementsJson = reply["data"] as List<object>;
+         foreach(Dictionary<string, object> jsonAchievement in achievementsJson)
+         {
+            achievements.Add(new Achievement(jsonAchievement));
+         }
+      }
+
+      if(Debug.isDebugBuild)
+      {
+         if(reply.ContainsKey("error"))
+         {
+            Dictionary<string, object> error = reply["error"] as Dictionary<string, object>;
+            Debug.Log("Error retrieving user achievement list (" + error["code"] + "): " + error["message"]);
+         }
+         else
+         {
+            Debug.Log("User achievement list reply (" + reply["code"] + "):");
+            foreach(Achievement achievement in achievements)
+            {
+               Debug.Log(achievement);
+            }
+         }
+      }
+
+      if(UserAchievementListReceived != null)
+      {
+         if(reply.ContainsKey("error"))
+         {
+            Dictionary<string, object> error = reply["error"] as Dictionary<string, object>;
+            UserAchievementListReceived(this, null, error["message"]);
+         }
+         else
+         {
+            UserAchievementListReceived(this, achievements, null);
+         }
       }
    }
    #endregion

@@ -55,6 +55,13 @@ public class MainMenu : MonoBehaviour
          Carrot.Instance.postAchievement(achieveString);
       }
 
+      // Get User Achievements
+      GUILayout.Space(buttonSpacing);
+      if(GUILayout.Button("List User Achievements", GUILayout.Height(buttonHeight)))
+      {
+         Carrot.Instance.getUserAchievements();
+      }
+
       // Like Game
       GUILayout.Space(buttonSpacing);
       if(GUILayout.Button("Like Game", GUILayout.Height(buttonHeight)))
