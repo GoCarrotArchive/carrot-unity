@@ -147,6 +147,13 @@ public class Carrot : MonoBehaviour
    public delegate void UserAchievementListReceivedHandler(object sender, IList<Achievement> achievements, string errors);
 
    /// <summary>
+   /// The delegate type for the <see cref="FriendHighScoreListReceived"/> event.
+   /// </summary>
+   /// <param name="sender">The object which dispatched the <see cref="FriendHighScoreListReceived"/> event.</param>
+   /// <param name="achievements">The high scores for the current Carrot user's friends.</param>
+   public delegate void FriendHighScoreListReceivedHandler(object sender, IList<Score> scores, string errors);
+
+   /// <summary>
    /// An event which will notify listeners when the authentication status for the Carrot user has changed.
    /// </summary>
    public static event AuthenticationStatusChangedHandler AuthenticationStatusChanged;
@@ -165,7 +172,12 @@ public class Carrot : MonoBehaviour
    public static event UserAchievementListReceivedHandler UserAchievementListReceived;
 
    /// <summary>
-   /// C# Representation of a Carrot Achievement
+   /// An event which will notify listeners when the list of friend high scores has been received.
+   /// </summary>
+   public static event FriendHighScoreListReceivedHandler FriendHighScoreListReceived;
+
+   /// <summary>
+   /// C# Representation of a Carrot Achievement.
    /// </summary>
    public class Achievement
    {
@@ -186,6 +198,32 @@ public class Carrot : MonoBehaviour
       {
          return string.Format("identifier: '{0}', title: '{1}', image: '{2}', description: '{3}'",
             Identifier, Title, ImageUrl, Description);
+      }
+   }
+
+   /// <summary>
+   /// C# Representation of a Carrot high score.
+   /// </summary>
+   public class Score
+   {
+      public long Value;
+      public string Name;
+      public string FacebookId;
+      public bool IsCurrentUser;
+
+      public Score(IDictionary<string, object> fromJson)
+      {
+         Dictionary<string, object> userJson = fromJson["user"] as Dictionary<string, object>;
+         Value = (long)fromJson["score"];
+         Name = userJson["name"] as string;
+         FacebookId = userJson["id"] as string;
+         IsCurrentUser = (bool)userJson["is_current_user"];
+      }
+
+      public override string ToString()
+      {
+         return string.Format("'{0}' ({1}): {2}, is current user? {3}",
+            Name, FacebookId, Value, IsCurrentUser);
       }
    }
 
@@ -310,6 +348,22 @@ public class Carrot : MonoBehaviour
 #else
          Debug.Log("Carrot::postHighScore(" + score + (leaderboardId != null ? ", '" + leaderboardId + "')" : ")"));
          return true;
+#endif
+      }
+
+      /// <summary>
+      /// Get the the scores for the current Carrot user and their Facebook friends.
+      /// </summary>
+      public void getFriendScores()
+      {
+#if UNITY_ANDROID && !UNITY_EDITOR
+         mCarrot.Call("getFriendHighScoresUnity", mDelegateObject.name);
+//#elif !UNITY_EDITOR
+         // TODO: iOS
+         //(Carrot_PostAchievement(achievementId) == 1);
+#else
+         Debug.Log("Carrot:getFriendScores()");
+         mDelegateObject.SendMessage("friendHighScoresReceived", "{\"code\":200,\"data\":[{\"score\": 10000000, \"user\": {\"is_current_user\": true, \"name\": \"Pat Wilson\", \"id\": \"532815528\"}}, {\"score\": 0, \"user\": {\"is_current_user\": false, \"name\": \"Mark McCoy\", \"id\": \"581337186\"}}]}");
 #endif
       }
 
@@ -686,14 +740,6 @@ public class Carrot : MonoBehaviour
             Dictionary<string, object> error = reply["error"] as Dictionary<string, object>;
             Debug.Log("Error retrieving user achievement list (" + error["code"] + "): " + error["message"]);
          }
-         else
-         {
-            Debug.Log("User achievement list reply (" + reply["code"] + "):");
-            foreach(Achievement achievement in achievements)
-            {
-               Debug.Log(achievement);
-            }
-         }
       }
 
       if(UserAchievementListReceived != null)
@@ -701,11 +747,48 @@ public class Carrot : MonoBehaviour
          if(reply.ContainsKey("error"))
          {
             Dictionary<string, object> error = reply["error"] as Dictionary<string, object>;
-            UserAchievementListReceived(this, null, error["message"]);
+            UserAchievementListReceived(this, null, error["message"] as string);
          }
          else
          {
             UserAchievementListReceived(this, achievements, null);
+         }
+      }
+   }
+
+   public void friendHighScoresReceived(string message)
+   {
+      Dictionary<string, object> reply = Json.Deserialize(message) as Dictionary<string, object>;
+      List<Score> scores = new List<Score>();
+
+      if(reply.ContainsKey("data"))
+      {
+         List<object> scoresJson = reply["data"] as List<object>;
+         foreach(Dictionary<string, object> jsonScore in scoresJson)
+         {
+            scores.Add(new Score(jsonScore));
+         }
+      }
+
+      if(Debug.isDebugBuild)
+      {
+         if(reply.ContainsKey("error"))
+         {
+            Dictionary<string, object> error = reply["error"] as Dictionary<string, object>;
+            Debug.Log("Error retrieving high score list (" + error["code"] + "): " + error["message"]);
+         }
+      }
+
+      if(FriendHighScoreListReceived != null)
+      {
+         if(reply.ContainsKey("error"))
+         {
+            Dictionary<string, object> error = reply["error"] as Dictionary<string, object>;
+            FriendHighScoreListReceived(this, null, error["message"] as string);
+         }
+         else
+         {
+            FriendHighScoreListReceived(this, scores, null);
          }
       }
    }
