@@ -320,9 +320,8 @@ public class Carrot : MonoBehaviour
       {
 #if UNITY_ANDROID && !UNITY_EDITOR
          mCarrot.Call("getUserAchievementsUnity", mDelegateObject.name);
-//#elif !UNITY_EDITOR
-         // TODO: iOS
-         //(Carrot_PostAchievement(achievementId) == 1);
+#elif !UNITY_EDITOR
+         Carrot_GetUserAchievementsUnity(mDelegateObject.name);
 #else
          Debug.Log("Carrot:getUserAchievements()");
          mDelegateObject.SendMessage("userAchievementListReceived", "{\"code\":200,\"data\":[{\"description\":\"\\\"That\'s not how a chicken dances, chickens don\'t clap!\\\"\",\"identifier\":\"chicken\",\"image_url\":\"https://d2h7sc2qwu171k.cloudfront.net/assets/gob-bluth-gif-7-1.gif\",\"points\":10,\"title\":\"Chicken\"},{\"description\":\"Here drink this, now write the check.\",\"identifier\":\"funded\",\"image_url\":\"https://d2h7sc2qwu171k.cloudfront.net/assets/1eyhp.gif\",\"points\":20,\"title\":\"Funded\"}]}");
@@ -358,9 +357,8 @@ public class Carrot : MonoBehaviour
       {
 #if UNITY_ANDROID && !UNITY_EDITOR
          mCarrot.Call("getFriendHighScoresUnity", mDelegateObject.name);
-//#elif !UNITY_EDITOR
-         // TODO: iOS
-         //(Carrot_PostAchievement(achievementId) == 1);
+#elif !UNITY_EDITOR
+         Carrot_GetFriendScoresUnity(mDelegateObject.name);
 #else
          Debug.Log("Carrot:getFriendScores()");
          mDelegateObject.SendMessage("friendHighScoresReceived", "{\"code\":200,\"data\":[{\"score\": 10000000, \"user\": {\"is_current_user\": true, \"name\": \"Pat Wilson\", \"id\": \"532815528\"}}, {\"score\": 0, \"user\": {\"is_current_user\": false, \"name\": \"Mark McCoy\", \"id\": \"581337186\"}}]}");
@@ -614,8 +612,16 @@ public class Carrot : MonoBehaviour
          [MarshalAs(UnmanagedType.LPStr)] string achievementId);
 
       [DllImport(DLL_IMPORT_TARGET)]
+      private extern static void Carrot_GetUserAchievementsUnity(
+         [MarshalAs(UnmanagedType.LPStr)] string objectName);
+
+      [DllImport(DLL_IMPORT_TARGET)]
       private extern static int Carrot_PostHighScore(uint score,
          [MarshalAs(UnmanagedType.LPStr)] string leaderboardId);
+
+      [DllImport(DLL_IMPORT_TARGET)]
+      private extern static void Carrot_GetFriendScoresUnity(
+         [MarshalAs(UnmanagedType.LPStr)] string objectName);
 
       [DllImport(DLL_IMPORT_TARGET)]
       private extern static int Carrot_PostInstanceAction(

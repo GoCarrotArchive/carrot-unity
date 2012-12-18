@@ -52,3 +52,19 @@ void Carrot_AssignUnityDelegate(const char* objectName)
    [UnityCarrotDelegate sharedInstance].objectName = [NSString stringWithUTF8String:objectName];
    [Carrot sharedInstance].delegate = [UnityCarrotDelegate sharedInstance];
 }
+
+void Carrot_GetUserAchievementsUnity(const char* objectName)
+{
+   [[Carrot sharedInstance] getUserAchievementsEx:^(NSHTTPURLResponse* response, NSData* data) {
+      UnitySendMessage(objectName, "userAchievementListReceived",
+         [[[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding] UTF8String]);
+   }];
+}
+
+void Carrot_GetFriendScoresUnity(const char* objectName)
+{
+   [[Carrot sharedInstance] getFriendScoresEx:^(NSHTTPURLResponse* response, NSData* data) {
+      UnitySendMessage(objectName, "friendHighScoresReceived",
+         [[[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding] UTF8String]);
+   }];
+}
