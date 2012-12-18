@@ -60,6 +60,7 @@ namespace :android do
     chdir "../carrot-android" do
       sh "ant compile && ant jar"
     end
+    cp "#{CARROT_JAR}", "Assets/Plugins/Android/Carrot.jar"
   end
 end
 
@@ -86,6 +87,8 @@ namespace :ios do
         "-output build/libCarrot.a"
       ].join(" ")
     end
+    cp "../carrot-ios/build/libCarrot.a", "Assets/Plugins/iOS/libCarrot.a"
+    cp "../carrot-ios/Src/Carrot.h", "Assets/Plugins/iOS/Carrot.h"
   end
 end
 
@@ -99,17 +102,6 @@ desc "Build Unity Package"
 task :unity => "unity:package"
 namespace :unity do
   task :package do
-    # Copy stuff in
-    if ios?
-      cp "../carrot-ios/build/libCarrot.a", "Assets/Plugins/iOS/libCarrot.a"
-      cp "../carrot-ios/Src/Carrot.h", "Assets/Plugins/iOS/Carrot.h"
-    end
-
-    if android_java?
-      cp "#{CARROT_JAR}", "Assets/Plugins/Android/Carrot.jar"
-    end
-
-    # Build .unitypackage
     project_path = File.expand_path("./")
     package_path = File.expand_path("./Carrot.unitypackage")
     mv "#{project_path}/Assets/Example", "#{project_path}/Assets/.Example"
