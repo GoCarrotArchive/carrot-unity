@@ -332,20 +332,15 @@ public class Carrot : MonoBehaviour
       /// Post a high score to Carrot.
       /// </summary>
       /// <param name="score">Score.</param>
-      /// <param name="leaderboardId">Leaderboard Id.</param>
       /// <returns><c>true</c> if the high score request has been cached, and will be sent to the server; <c>false</c> otherwise.</returns>
-      public bool postHighScore(uint score, string leaderboardId = null)
+      public bool postHighScore(uint score)
       {
 #if UNITY_ANDROID && !UNITY_EDITOR
-         if(leaderboardId == null) leaderboardId = "";
-         using(AndroidJavaObject leaderboardIdString = new AndroidJavaObject("java.lang.String", leaderboardId))
-         {
-            return mCarrot.Call<bool>("postHighScore", (int)score, leaderboardIdString);
-         }
+         return mCarrot.Call<bool>("postHighScore", (int)score);
 #elif !UNITY_EDITOR
-         return (Carrot_PostHighScore(score, leaderboardId) == 1);
+         return (Carrot_PostHighScore(score) == 1);
 #else
-         Debug.Log("Carrot::postHighScore(" + score + (leaderboardId != null ? ", '" + leaderboardId + "')" : ")"));
+         Debug.Log("Carrot::postHighScore(" + score + ")"));
          return true;
 #endif
       }
@@ -616,8 +611,7 @@ public class Carrot : MonoBehaviour
          [MarshalAs(UnmanagedType.LPStr)] string objectName);
 
       [DllImport(DLL_IMPORT_TARGET)]
-      private extern static int Carrot_PostHighScore(uint score,
-         [MarshalAs(UnmanagedType.LPStr)] string leaderboardId);
+      private extern static int Carrot_PostHighScore(uint score);
 
       [DllImport(DLL_IMPORT_TARGET)]
       private extern static void Carrot_GetFriendScoresUnity(
