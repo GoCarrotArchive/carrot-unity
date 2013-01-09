@@ -340,7 +340,7 @@ public class Carrot : MonoBehaviour
 #elif !UNITY_EDITOR
          return (Carrot_PostHighScore(score) == 1);
 #else
-         Debug.Log("Carrot::postHighScore(" + score + ")"));
+         Debug.Log("Carrot::postHighScore(" + score + ")");
          return true;
 #endif
       }
