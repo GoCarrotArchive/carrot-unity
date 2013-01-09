@@ -63,6 +63,11 @@ public class CarrotSettings : EditorWindow
             UpdateCarrotGameObject();
          }
       }
+
+      if(GUILayout.Button("Get a Carrot Account", GUILayout.Height(25)))
+      {
+         Application.OpenURL("https://gocarrot.com/developers/sign_up?referrer=unity");
+      }
    }
 
    void UpdateCarrotGameObject()
