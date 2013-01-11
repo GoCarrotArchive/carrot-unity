@@ -76,10 +76,6 @@ public class Carrot : MonoBehaviour
 
       /// <summary>The 'publish_actions' permission required for Carrot.</summary>
       PublishActions = 1,
-
-      /// <summary>Request both read permissions and 'publish_actions' at the same time.</summary>
-      /// <remarks>Note that this will fall back to iOS < 6 Facebook SSO.</remarks>
-      ReadWrite = 2 // Will fall back to iOS < 6 Facebook SSO
    }
 
    /// <summary>
