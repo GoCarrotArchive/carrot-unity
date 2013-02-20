@@ -12,16 +12,20 @@ public class MainMenu : MonoBehaviour
    string achieveString = "achievement_id";
    string authStatus = "";
 
-   void AuthenticationStatusChangedHandler(object sender, Carrot.AuthStatus status)
+   void AuthenticationStatusChangedHandler(object sender, GoCarrotInc.Carrot.AuthStatus status)
    {
       authStatus = Carrot.authStatusString(status);
    }
 
    void Start()
    {
-      authStatus = Carrot.authStatusString(Carrot.AuthStatus.Undetermined);
+      authStatus = Carrot.authStatusString(GoCarrotInc.Carrot.AuthStatus.Undetermined);
 
       Carrot.AuthenticationStatusChanged += AuthenticationStatusChangedHandler;
+
+#if UNITY_EDITOR || (!UNITY_ANDROID && !UNITY_IPHONE)
+      Carrot.Instance.UserId = "zerostride@gmail.com";
+#endif
    }
 
    void OnGUI()

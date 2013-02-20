@@ -105,7 +105,11 @@ namespace :unity do
     project_path = File.expand_path("./")
     package_path = File.expand_path("./Carrot.unitypackage")
     mv "#{project_path}/Assets/Example", "#{project_path}/Assets/.Example"
-    unity "-quit -batchmode -projectPath #{project_path} -exportPackage Assets #{package_path}"
+    begin
+      unity "-quit -batchmode -projectPath #{project_path} -exportPackage Assets #{package_path}"
+    rescue
+      puts "Unity build failed."
+    end
     mv "#{project_path}/Assets/.Example", "#{project_path}/Assets/Example"
   end
 end

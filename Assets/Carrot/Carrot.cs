@@ -37,33 +37,6 @@ public class Carrot : MonoBehaviour
    public string CarrotAppSecret;
 
    /// <summary>
-   /// Represents a Carrot authentication status for a user.
-   /// </summary>
-   /// <remarks>
-   /// This value can be obtained using the <see cref="CarrotBridge.Status"/> property. You will
-   /// also be notified of any change in authentication status by signing up for the
-   /// <see cref="CarrotBridge.AuthenticationStatusChangedHandler"/> event.
-   /// <p>
-   /// Note that even though the status may not be <see cref="AuthStatus.Ready"/> Carrot will
-   /// store the scores, achievements, and likes in a client-side cache and they will be sent
-   /// when the authentication status is <see cref="AuthStatus.Ready"/>.
-   /// </remarks>
-   public enum AuthStatus : int
-   {
-      /// <summary>The current user has not yet authorized the app, or has deauthorized the app.</summary>
-      NotAuthorized = -1,
-
-      /// <summary>The current authentication status has not been determined.</summary>
-      Undetermined = 0,
-
-      /// <summary>The current user has not granted the 'publish_actions' permission, or has removed the permission.</summary>
-      ReadOnly = 1,
-
-      /// <summary>The current user has granted all needed permissions and Carrot will send events to the Carrot server.</summary>
-      Ready = 2
-   }
-
-   /// <summary>
    /// The kind of authentication status to request for Facebook SSO (iOS only).
    /// </summary>
    /// <remarks>
@@ -109,14 +82,14 @@ public class Carrot : MonoBehaviour
    /// Return the string value of an <see cref="AuthStatus"/> value.
    /// </summary>
    /// <returns>The string description of an <see cref="AuthStatus"/>.</returns>
-   public static string authStatusString(AuthStatus authStatus)
+   public static string authStatusString(GoCarrotInc.Carrot.AuthStatus authStatus)
    {
       switch(authStatus)
       {
-         case AuthStatus.NotAuthorized: return "Carrot user has not authorized the application.";
-         case AuthStatus.Undetermined: return "Carrot user status is undetermined.";
-         case AuthStatus.ReadOnly: return "Carrot user has not allowed the 'publish_actions' permission.";
-         case AuthStatus.Ready: return "Carrot user is authorized.";
+         case GoCarrotInc.Carrot.AuthStatus.NotAuthorized: return "Carrot user has not authorized the application.";
+         case GoCarrotInc.Carrot.AuthStatus.Undetermined: return "Carrot user status is undetermined.";
+         case GoCarrotInc.Carrot.AuthStatus.ReadOnly: return "Carrot user has not allowed the 'publish_actions' permission.";
+         case GoCarrotInc.Carrot.AuthStatus.Ready: return "Carrot user is authorized.";
          default: return "Invalid Carrot AuthStatus.";
       }
    }
@@ -126,7 +99,7 @@ public class Carrot : MonoBehaviour
    /// </summary>
    /// <param name="sender">The object which dispatched the <see cref="AuthenticationStatusChanged"/> event.</param>
    /// <param name="status">The new authentication status.</param>
-   public delegate void AuthenticationStatusChangedHandler(object sender, AuthStatus status);
+   public delegate void AuthenticationStatusChangedHandler(object sender, GoCarrotInc.Carrot.AuthStatus status);
 
    /// <summary>
    /// The delegate type for the <see cref="ApplicationLinkReceived"/> event.
@@ -177,26 +150,47 @@ public class Carrot : MonoBehaviour
                                                appSecretString, hostnameString, debugUDIDString);
             }
          }
+#elif UNITY_EDITOR || (!UNITY_ANDROID && !UNITY_IPHONE)
+         mCarrot = new GoCarrotInc.Carrot(appId, appSecret, null);
+         mAuthStatusUpdates = new List<GoCarrotInc.Carrot.AuthStatus>();
 #endif
       }
 
       /// <summary>
       /// Check the authentication status of the current Carrot user.
       /// </summary>
-      /// <value>The <see cref="AuthStatus"/> of the current Carrot user.</value>
-      public AuthStatus Status
+      /// <value>The <see cref="GoCarrotInc.Carrot.AuthStatus"/> of the current Carrot user.</value>
+      public GoCarrotInc.Carrot.AuthStatus Status
       {
          get
          {
 #if UNITY_ANDROID  && !UNITY_EDITOR
-            return (AuthStatus)mCarrot.Call<int>("getStatus");
-#elif !UNITY_EDITOR
-            return (AuthStatus)Carrot_AuthStatus();
+            return (GoCarrotInc.Carrot.AuthStatus)mCarrot.Call<int>("getStatus");
+#elif UNITY_IPHONE && !UNITY_EDITOR
+            return (GoCarrotInc.Carrot.AuthStatus)Carrot_AuthStatus();
 #else
-            return AuthStatus.Undetermined;
+            return mCarrot.Status;
 #endif
          }
       }
+
+#if UNITY_EDITOR || (!UNITY_ANDROID && !UNITY_IPHONE)
+      /// <summary>
+      /// The user id for the current Carrot user.
+      /// </summary>
+      /// <value>The user id of the current Carrot user.</value>
+      public string UserId
+      {
+         get
+         {
+            return mCarrot.UserId;
+         }
+         set
+         {
+            mCarrot.UserId = value;
+         }
+      }
+#endif
 
       /// <summary>
       /// Assign a Facebook user access token to allow posting of Carrot events.
@@ -209,8 +203,10 @@ public class Carrot : MonoBehaviour
          {
             mCarrot.Call("setAccessToken", accessTokenString);
          }
-#elif !UNITY_EDITOR
+#elif UNITY_IPHONE && !UNITY_EDITOR
          Carrot_SetAccessToken(accessToken);
+#else
+         mCarrot.validateUserAsync(accessToken);
 #endif
       }
 
@@ -226,10 +222,10 @@ public class Carrot : MonoBehaviour
          {
             return mCarrot.Call<bool>("postAchievement", achievementIdString);
          }
-#elif !UNITY_EDITOR
+#elif UNITY_IPHONE && !UNITY_EDITOR
          return (Carrot_PostAchievement(achievementId) == 1);
 #else
-         Debug.Log("Carrot:postAchievement('" + achievementId + "')");
+         mCarrot.postAchievementAsync(achievementId);
          return true;
 #endif
       }
@@ -243,10 +239,10 @@ public class Carrot : MonoBehaviour
       {
 #if UNITY_ANDROID && !UNITY_EDITOR
          return mCarrot.Call<bool>("postHighScore", (int)score);
-#elif !UNITY_EDITOR
+#elif UNITY_IPHONE && !UNITY_EDITOR
          return (Carrot_PostHighScore(score) == 1);
 #else
-         Debug.Log("Carrot::postHighScore(" + score + ")");
+         mCarrot.postHighScoreAsync(score);
          return true;
 #endif
       }
@@ -277,12 +273,11 @@ public class Carrot : MonoBehaviour
          {
             return mCarrot.Call<bool>("postJsonAction", actionIdString, actionPropertiesString, objectInstanceIdString);
          }
-#elif !UNITY_EDITOR
+#elif UNITY_IPHONE && !UNITY_EDITOR
          string actionPropertiesJson = (actionProperties == null ? null : Json.Serialize(actionProperties));
          return (Carrot_PostInstanceAction(actionId, actionPropertiesJson, objectInstanceId) == 1);
 #else
-         string actionPropertiesJson = (actionProperties == null ? "" : Json.Serialize(actionProperties));
-         Debug.Log("Carrot::postAction('" + actionId + "', " + actionPropertiesJson + ", '" + objectInstanceId + "')");
+         mCarrot.postActionAsync(actionId, actionProperties, objectInstanceId);
          return true;
 #endif
       }
@@ -310,8 +305,8 @@ public class Carrot : MonoBehaviour
       /// <returns><c>true</c> if the action request has been cached, and will be sent to the server; <c>false</c> otherwise.</returns>
       public bool postAction(string actionId, IDictionary actionProperties, string objectId, IDictionary objectProperties, string objectInstanceId = null)
       {
-         string objectPropertiesJson = Json.Serialize(objectProperties);
 #if UNITY_ANDROID && !UNITY_EDITOR
+         string objectPropertiesJson = Json.Serialize(objectProperties);
          if(objectInstanceId == null) objectInstanceId = "";
          string actionPropertiesJson = (actionProperties == null ? "" : Json.Serialize(actionProperties));
          using(AndroidJavaObject actionIdString = new AndroidJavaObject("java.lang.String", actionId),
@@ -322,12 +317,12 @@ public class Carrot : MonoBehaviour
          {
             return mCarrot.Call<bool>("postJsonAction", actionIdString, actionPropertiesString, objectIdString, objectPropertiesString, objectInstanceIdString);
          }
-#elif !UNITY_EDITOR
+#elif UNITY_IPHONE && !UNITY_EDITOR
+         string objectPropertiesJson = Json.Serialize(objectProperties);
          string actionPropertiesJson = (actionProperties == null ? null : Json.Serialize(actionProperties));
          return (Carrot_PostCreateAction(actionId, actionPropertiesJson, objectId, objectPropertiesJson, objectInstanceId) == 1);
 #else
-         string actionPropertiesJson = (actionProperties == null ? "" : Json.Serialize(actionProperties));
-         Debug.Log("Carrot::postAction('" + actionId + "', " + actionPropertiesJson + ", '" + objectId + "', " + objectPropertiesJson + ")");
+         mCarrot.postActionAsync(actionId, actionProperties, objectId, objectProperties, objectInstanceId);
          return true;
 #endif
       }
@@ -340,10 +335,10 @@ public class Carrot : MonoBehaviour
       {
 #if UNITY_ANDROID && !UNITY_EDITOR
          return mCarrot.Call<bool>("likeGame");
-#elif !UNITY_EDITOR
+#elif UNITY_IPHONE && !UNITY_EDITOR
          return (Carrot_LikeGame() == 1);
 #else
-         Debug.Log("Carrot::likeGame()");
+         mCarrot.likeGameAsync();
          return true;
 #endif
       }
@@ -356,10 +351,10 @@ public class Carrot : MonoBehaviour
       {
 #if UNITY_ANDROID && !UNITY_EDITOR
          return mCarrot.Call<bool>("likePublisher");
-#elif !UNITY_EDITOR
+#elif UNITY_IPHONE && !UNITY_EDITOR
          return (Carrot_LikePublisher() == 1);
 #else
-         Debug.Log("Carrot::likePublisher()");
+         mCarrot.likePublisherAsync();
          return true;
 #endif
       }
@@ -376,10 +371,10 @@ public class Carrot : MonoBehaviour
          {
             return mCarrot.Call<bool>("likeAchievement", achievementIdString);
          }
-#elif !UNITY_EDITOR
+#elif UNITY_IPHONE && !UNITY_EDITOR
          return (Carrot_LikeAchievement(achievementId) == 1);
 #else
-         Debug.Log("Carrot::likeAchievement('" + achievementId + "')");
+         mCarrot.likeAchievementAsync(achievementId);
          return true;
 #endif
       }
@@ -396,10 +391,10 @@ public class Carrot : MonoBehaviour
          {
             return mCarrot.Call<bool>("likeObject", objectIdString);
          }
-#elif !UNITY_EDITOR
+#elif UNITY_IPHONE && !UNITY_EDITOR
          return (Carrot_LikeObject(objectId) == 1);
 #else
-         Debug.Log("Carrot::likeObject('" + objectId + "')");
+         mCarrot.likeObjectAsync(objectId);
          return true;
 #endif
       }
@@ -414,11 +409,14 @@ public class Carrot : MonoBehaviour
       {
 #if UNITY_ANDROID && !UNITY_EDITOR
          return mCarrot.Call<bool>("doFacebookAuth", allowLoginUI, (int)permission);
-#elif !UNITY_EDITOR
+#elif UNITY_IPHONE && !UNITY_EDITOR
          return (Carrot_DoFacebookAuth(allowLoginUI ? 1 : 0, (int)permission) == 1);
-#else
+#elif UNITY_EDITOR
          Debug.Log("Carrot::doFacebookAuth");
          return true;
+#else
+         Debug.Log("Carrot Facebook Authentication wrapping is not available outside of iOS/Android.");
+         return false;
 #endif
       }
 
@@ -435,13 +433,21 @@ public class Carrot : MonoBehaviour
       }
 #endif
 
-      internal void setDelegateObject(MonoBehaviour delegateObject)
+      internal void setDelegateObject(Carrot delegateObject)
       {
-         mDelegateObject = delegateObject;
 #if UNITY_ANDROID && !UNITY_EDITOR
+         mDelegateObject = delegateObject;
          mCarrot.Call("setUnityHandler", mDelegateObject.name);
-#elif !UNITY_EDITOR
+#elif UNITY_IPHONE && !UNITY_EDITOR
+         mDelegateObject = delegateObject;
          Carrot_AssignUnityDelegate(mDelegateObject.name);
+#else
+         mCarrot.AuthenticationStatusChanged += (object sender, GoCarrotInc.Carrot.AuthStatus status) => {
+            lock(mAuthStatusUpdates)
+            {
+               mAuthStatusUpdates.Add(status);
+            }
+         };
 #endif
       }
 
@@ -479,13 +485,10 @@ public class Carrot : MonoBehaviour
       #endregion
       /// @endcond
 
-#if !UNITY_ANDROID && !UNITY_EDITOR
+#if UNITY_IPHONE && !UNITY_EDITOR
       #region Dll Imports
-#if UNITY_IPHONE
       private const string DLL_IMPORT_TARGET = "__Internal";
-#else
-      private const string DLL_IMPORT_TARGET = "Carrot";
-#endif
+
       [DllImport(DLL_IMPORT_TARGET)]
       private extern static int Carrot_AuthStatus();
 
@@ -548,11 +551,16 @@ public class Carrot : MonoBehaviour
 #endif
 
       #region Member Variables
-#if UNITY_ANDROID && !UNITY_EDITOR
+#if UNITY_IPHONE && !UNITY_EDITOR
+      Carrot mDelegateObject;
+#elif UNITY_ANDROID && !UNITY_EDITOR
       AndroidJavaObject mCarrot;
+      Carrot mDelegateObject;
+#elif UNITY_EDITOR || (!UNITY_ANDROID && !UNITY_IPHONE)
+      GoCarrotInc.Carrot mCarrot;
+      internal List<GoCarrotInc.Carrot.AuthStatus> mAuthStatusUpdates;
 #endif
       bool mIsDisposed;
-      MonoBehaviour mDelegateObject;
       #endregion
    }
 
@@ -580,6 +588,27 @@ public class Carrot : MonoBehaviour
    }
 #endif
 
+#if UNITY_EDITOR && (!UNITY_ANDROID && !UNITY_IPHONE)
+   void FixedUpdate()
+   {
+      // Ensure the events are triggered from the main thread
+      if(mCarrot.mAuthStatusUpdates.Count > 0)
+      {
+         lock(mCarrot.mAuthStatusUpdates)
+         {
+            if(AuthenticationStatusChanged != null)
+            {
+               foreach(GoCarrotInc.Carrot.AuthStatus status in mCarrot.mAuthStatusUpdates)
+               {
+                  AuthenticationStatusChanged(this, status);
+               }
+            }
+            mCarrot.mAuthStatusUpdates.Clear();
+         }
+      }
+   }
+#endif
+
    void OnApplicationQuit()
    {
       Destroy(this);
@@ -588,6 +617,7 @@ public class Carrot : MonoBehaviour
 
    /// @cond hide_from_doxygen
    #region UnitySendMessage Handlers
+#if !UNITY_EDITOR && (UNITY_ANDROID || UNITY_IPHONE)
    public void authenticationStatusChanged(string message)
    {
       AuthStatus updatedStatus = (AuthStatus)int.Parse(message);
@@ -609,6 +639,7 @@ public class Carrot : MonoBehaviour
          ApplicationLinkReceived(this, message);
       }
    }
+#endif
    #endregion
    /// @endcond
 
