@@ -136,20 +136,6 @@ public class Carrot : MonoBehaviour
    public delegate void ApplicationLinkReceivedHandler(object sender, string targetURL);
 
    /// <summary>
-   /// The delegate type for the <see cref="UserAchievementListReceived"/> event.
-   /// </summary>
-   /// <param name="sender">The object which dispatched the <see cref="UserAchievementListReceived"/> event.</param>
-   /// <param name="achievements">The achievements which the current Carrot user has earned.</param>
-   public delegate void UserAchievementListReceivedHandler(object sender, IList<Achievement> achievements, string errors);
-
-   /// <summary>
-   /// The delegate type for the <see cref="FriendHighScoreListReceived"/> event.
-   /// </summary>
-   /// <param name="sender">The object which dispatched the <see cref="FriendHighScoreListReceived"/> event.</param>
-   /// <param name="achievements">The high scores for the current Carrot user's friends.</param>
-   public delegate void FriendHighScoreListReceivedHandler(object sender, IList<Score> scores, string errors);
-
-   /// <summary>
    /// An event which will notify listeners when the authentication status for the Carrot user has changed.
    /// </summary>
    public static event AuthenticationStatusChangedHandler AuthenticationStatusChanged;
@@ -161,67 +147,6 @@ public class Carrot : MonoBehaviour
    /// For more information about deep-linking see: https://developers.facebook.com/blog/post/2012/02/21/improving-app-distribution-on-ios/
    /// </remarks>
    public static event ApplicationLinkReceivedHandler ApplicationLinkReceived;
-
-   /// <summary>
-   /// An event which will notify listeners when the list of user achievements has been received.
-   /// </summary>
-   public static event UserAchievementListReceivedHandler UserAchievementListReceived;
-
-   /// <summary>
-   /// An event which will notify listeners when the list of friend high scores has been received.
-   /// </summary>
-   public static event FriendHighScoreListReceivedHandler FriendHighScoreListReceived;
-
-   /// <summary>
-   /// C# Representation of a Carrot Achievement.
-   /// </summary>
-   public class Achievement
-   {
-      public string Description;
-      public string Identifier;
-      public string ImageUrl;
-      public string Title;
-
-      public Achievement(IDictionary<string, object> fromJson)
-      {
-         Description = fromJson["description"] as string;
-         Identifier = fromJson["identifier"] as string;
-         ImageUrl = fromJson["image_url"] as string;
-         Title = fromJson["title"] as string;
-      }
-
-      public override string ToString()
-      {
-         return string.Format("identifier: '{0}', title: '{1}', image: '{2}', description: '{3}'",
-            Identifier, Title, ImageUrl, Description);
-      }
-   }
-
-   /// <summary>
-   /// C# Representation of a Carrot high score.
-   /// </summary>
-   public class Score
-   {
-      public long Value;
-      public string Name;
-      public string FacebookId;
-      public bool IsCurrentUser;
-
-      public Score(IDictionary<string, object> fromJson)
-      {
-         Dictionary<string, object> userJson = fromJson["user"] as Dictionary<string, object>;
-         Value = (long)fromJson["score"];
-         Name = userJson["name"] as string;
-         FacebookId = userJson["id"] as string;
-         IsCurrentUser = (bool)userJson["is_current_user"];
-      }
-
-      public override string ToString()
-      {
-         return string.Format("'{0}' ({1}): {2}, is current user? {3}",
-            Name, FacebookId, Value, IsCurrentUser);
-      }
-   }
 
    /// <summary>
    /// A C# bridge to the native Carrot SDK.
@@ -310,21 +235,6 @@ public class Carrot : MonoBehaviour
       }
 
       /// <summary>
-      /// Get the list of achievements the current Carrot user has earned.
-      /// </summary>
-      public void getUserAchievements()
-      {
-#if UNITY_ANDROID && !UNITY_EDITOR
-         mCarrot.Call("getUserAchievementsUnity", mDelegateObject.name);
-#elif !UNITY_EDITOR
-         Carrot_GetUserAchievementsUnity(mDelegateObject.name);
-#else
-         Debug.Log("Carrot:getUserAchievements()");
-         mDelegateObject.SendMessage("userAchievementListReceived", "{\"code\":200,\"data\":[{\"description\":\"\\\"That\'s not how a chicken dances, chickens don\'t clap!\\\"\",\"identifier\":\"chicken\",\"image_url\":\"https://d2h7sc2qwu171k.cloudfront.net/assets/gob-bluth-gif-7-1.gif\",\"points\":10,\"title\":\"Chicken\"},{\"description\":\"Here drink this, now write the check.\",\"identifier\":\"funded\",\"image_url\":\"https://d2h7sc2qwu171k.cloudfront.net/assets/1eyhp.gif\",\"points\":20,\"title\":\"Funded\"}]}");
-#endif
-      }
-
-      /// <summary>
       /// Post a high score to Carrot.
       /// </summary>
       /// <param name="score">Score.</param>
@@ -338,21 +248,6 @@ public class Carrot : MonoBehaviour
 #else
          Debug.Log("Carrot::postHighScore(" + score + ")");
          return true;
-#endif
-      }
-
-      /// <summary>
-      /// Get the the scores for the current Carrot user and their Facebook friends.
-      /// </summary>
-      public void getFriendScores()
-      {
-#if UNITY_ANDROID && !UNITY_EDITOR
-         mCarrot.Call("getFriendHighScoresUnity", mDelegateObject.name);
-#elif !UNITY_EDITOR
-         Carrot_GetFriendScoresUnity(mDelegateObject.name);
-#else
-         Debug.Log("Carrot:getFriendScores()");
-         mDelegateObject.SendMessage("friendHighScoresReceived", "{\"code\":200,\"data\":[{\"score\": 10000000, \"user\": {\"is_current_user\": true, \"name\": \"Pat Wilson\", \"id\": \"532815528\"}}, {\"score\": 0, \"user\": {\"is_current_user\": false, \"name\": \"Mark McCoy\", \"id\": \"581337186\"}}]}");
 #endif
       }
 
@@ -555,7 +450,7 @@ public class Carrot : MonoBehaviour
       public void Dispose()
       {
          Dispose(true);
-         GC.SuppressFinalize(this); 
+         GC.SuppressFinalize(this);
       }
 
       protected virtual void Dispose(bool disposing)
@@ -712,80 +607,6 @@ public class Carrot : MonoBehaviour
       if(ApplicationLinkReceived != null)
       {
          ApplicationLinkReceived(this, message);
-      }
-   }
-
-   public void userAchievementListReceived(string message)
-   {
-      Dictionary<string, object> reply = Json.Deserialize(message) as Dictionary<string, object>;
-      List<Achievement> achievements = new List<Achievement>();
-
-      if(reply.ContainsKey("data"))
-      {
-         List<object> achievementsJson = reply["data"] as List<object>;
-         foreach(Dictionary<string, object> jsonAchievement in achievementsJson)
-         {
-            achievements.Add(new Achievement(jsonAchievement));
-         }
-      }
-
-      if(Debug.isDebugBuild)
-      {
-         if(reply.ContainsKey("error"))
-         {
-            Dictionary<string, object> error = reply["error"] as Dictionary<string, object>;
-            Debug.Log("Error retrieving user achievement list (" + error["code"] + "): " + error["message"]);
-         }
-      }
-
-      if(UserAchievementListReceived != null)
-      {
-         if(reply.ContainsKey("error"))
-         {
-            Dictionary<string, object> error = reply["error"] as Dictionary<string, object>;
-            UserAchievementListReceived(this, null, error["message"] as string);
-         }
-         else
-         {
-            UserAchievementListReceived(this, achievements, null);
-         }
-      }
-   }
-
-   public void friendHighScoresReceived(string message)
-   {
-      Dictionary<string, object> reply = Json.Deserialize(message) as Dictionary<string, object>;
-      List<Score> scores = new List<Score>();
-
-      if(reply.ContainsKey("data"))
-      {
-         List<object> scoresJson = reply["data"] as List<object>;
-         foreach(Dictionary<string, object> jsonScore in scoresJson)
-         {
-            scores.Add(new Score(jsonScore));
-         }
-      }
-
-      if(Debug.isDebugBuild)
-      {
-         if(reply.ContainsKey("error"))
-         {
-            Dictionary<string, object> error = reply["error"] as Dictionary<string, object>;
-            Debug.Log("Error retrieving high score list (" + error["code"] + "): " + error["message"]);
-         }
-      }
-
-      if(FriendHighScoreListReceived != null)
-      {
-         if(reply.ContainsKey("error"))
-         {
-            Dictionary<string, object> error = reply["error"] as Dictionary<string, object>;
-            FriendHighScoreListReceived(this, null, error["message"] as string);
-         }
-         else
-         {
-            FriendHighScoreListReceived(this, scores, null);
-         }
       }
    }
    #endregion
