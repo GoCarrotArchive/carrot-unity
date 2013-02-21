@@ -1,25 +1,12 @@
 require "rake/clean"
 CLEAN.include "**/.DS_Store"
 
-desc "Build libraries and copy into Unity project"
+desc "Build Unity package"
 task :default
 
 #
 # Helper methods
 #
-
-CARROT_JAR = File.expand_path("../carrot-android/build/Carrot.jar")
-
-def android_java?
-  # Return true if we should build the Android jar
-  ENV["ANDROID_SDK"] && File.exist?(ENV["ANDROID_SDK"])
-end
-
-def ios?
-  # Return true if we should build the iOS libraries.
-  true
-end
-
 def unity(*args)
   # Run Unity.
   sh "/Applications/Unity/Unity.app/Contents/MacOS/Unity #{args.join(' ')}"
@@ -41,54 +28,6 @@ end
 if doxygen?
   task :docs do
     sh DOXYGEN_BINARY
-  end
-end
-
-#
-# Android build tasks
-#
-
-if android_java?
-  task :default => "android:jar"
-else
-  puts "WARNING: Not building for Android."
-end
-
-namespace :android do
-  desc "Build Android jar"
-  task :jar do
-    chdir "../carrot-android" do
-      sh "ant compile && ant jar"
-    end
-    cp "#{CARROT_JAR}", "Assets/Plugins/Android/Carrot.jar"
-  end
-end
-
-#
-# iOS build tasks
-#
-
-if ios?
-  task :default => "ios:library"
-else
-  puts "WARNING: Not building for iOS."
-end
-
-namespace :ios do
-  desc "Build the iOS library"
-  task :library do
-    chdir "../carrot-ios" do
-      sh "xcodebuild -alltargets -project Carrot-iOS.xcodeproj"
-      sh [
-        "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/bin/lipo",
-        "-create",
-        "build/Release-iphoneos/libCarrot.a",
-        "build/Release-iphonesimulator/libCarrot.a",
-        "-output build/libCarrot.a"
-      ].join(" ")
-    end
-    cp "../carrot-ios/build/libCarrot.a", "Assets/Plugins/iOS/libCarrot.a"
-    cp "../carrot-ios/Src/Carrot.h", "Assets/Plugins/iOS/Carrot.h"
   end
 end
 
