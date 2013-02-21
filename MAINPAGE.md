@@ -3,23 +3,30 @@ Using Carrot with Unity                         {#mainpage}
 
 # Carrot User Authentication
 
-Carrot user authentication using Facebook SSO can be done directly through the C# API.
+First you must assign a UserId to Carrot. This UserId can be anything you want, but it must be unique for each user, and should not change.
 
-	if (Carrot.Instance.doFacebookAuth()) {
-		// Facebook SSO has started
-	} else {
-		// Facebook SSO has not started
-	}
+	Carrot.Instance.UserId = "some unique user id";
+
+Next you should validate that the user has authorized your Facebook application. You can do this by passing a Facebook User Access Token for that user, or by passing the Facebook User Id for that user.
+
+	Carrot.Instance.validateUser("User Access Token or Facebook User Id");
+
+You will be informed of user authentication events through the `AuthenticationStatusChanged` event.
+
+	Carrot.AuthenticationStatusChanged += (object sender, Carrot.AuthStatus status) => {
+		Debug.Log(Carrot.authStatusString(status));
+	};
 
 # Carrot API Calls
-
-When you make Carrot API calls they will be cached on the device using SQLite. This means that your user's actions will not be lost if device connectivity is lost. It will also store up the actions before a user has authenticated so that if they authenticate later, none of their achievements or high scores are lost.
 
 	// To post an achievement with the 'chicken' identifier:
 	Carrot.Instance.postAchievement("chicken");
 
 	// To post a high score:
 	Carrot.Instance.postHighScore(42);
+
+	// To post an Open Graph action with an existing Open Graph Object instance:
+	Carrot.Instance.postAction("action_id", "object_instance_id");
 
 	// To post an Open Graph Action with a dynamically created Open Graph Object:
 	IDictionary objectProperties = new Dictionary<string, object>();
