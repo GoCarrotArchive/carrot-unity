@@ -1,3 +1,4 @@
+#region License
 /* Carrot -- Copyright (C) 2012 GoCarrot Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,639 +13,625 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#endregion
 
+#region References
 using System;
 using MiniJSON;
+using System.Net;
 using UnityEngine;
+using System.Security;
 using System.Collections;
+using System.Net.Security;
+using CarrotInc.Amazon.Util;
 using System.Collections.Generic;
-using System.Runtime.InteropServices;
+using System.Security.Cryptography;
+using System.Text.RegularExpressions;
+using System.Security.Cryptography.X509Certificates;
+#endregion
 
 /// <summary>
-/// A MonoBehaviour which can be attached to a Unity GameObject
-/// to provide singleton access to a <see cref="Carrot.CarrotBridge"/>.
+/// A MonoBehaviour which can be attached to a Unity GameObject to
+/// provide access to Carrot functionality.
 /// </summary>
 public class Carrot : MonoBehaviour
 {
-   /// <summary>
-   /// The Facebook Application Id for your application.
-   /// </summary>
-   public string FacebookAppId;
+    /// <summary>
+    /// The Facebook Application Id for your application.
+    /// </summary>
+    public string FacebookAppId;
 
-   /// <summary>
-   /// The Carrot Application Secret for your application.
-   /// </summary>
-   public string CarrotAppSecret;
+    /// <summary>
+    /// The Carrot Application Secret for your application.
+    /// </summary>
+    public string CarrotAppSecret;
 
-   /// <summary>
-   /// The kind of authentication status to request for Facebook SSO (iOS only).
-   /// </summary>
-   /// <remarks>
-   /// For best practices information about Facebook SSO on iOS see: https://developers.facebook.com/blog/post/640/
-   /// </remarks>
-   public enum FacebookAuthPermission : int
-   {
-      /// <summary>Read-only permissions.</summary>
-      Read = 0,
-
-      /// <summary>The 'publish_actions' permission required for Carrot.</summary>
-      PublishActions = 1,
-   }
-
-   /// <summary>
-   /// Gets the <see cref="CarrotBridge"/> singleton.
-   /// </summary>
-   /// <value> The <see cref="CarrotBridge"/> singleton.</value>
-   public static CarrotBridge Instance
-   {
-      get
-      {
-         if(mInstance == null)
-         {
-            mInstance = FindObjectOfType(typeof(Carrot)) as Carrot;
-
+    /// <summary>
+    /// Gets the <see cref="Carrot"/> singleton.
+    /// </summary>
+    /// <value> The <see cref="Carrot"/> singleton.</value>
+    public static Carrot Instance
+    {
+        get
+        {
             if(mInstance == null)
             {
-               GameObject carrotGameObject = GameObject.Find("CarrotGameObject");
-               if(carrotGameObject != null)
-               {
-                  mInstance = carrotGameObject.GetComponent<Carrot>();
-               }
+                mInstance = FindObjectOfType(typeof(Carrot)) as Carrot;
+
+                if(mInstance == null)
+                {
+                    GameObject carrotGameObject = GameObject.Find("CarrotGameObject");
+                    if(carrotGameObject != null)
+                    {
+                        mInstance = carrotGameObject.GetComponent<Carrot>();
+                    }
+                }
+
+                if(mInstance == null) throw new NullReferenceException("No Carrot instance found in current scene!");
             }
+            return mInstance;
+        }
+    }
 
-            if(mInstance == null) throw new NullReferenceException("No Carrot instance found in current scene!");
-         }
-         return mInstance.mCarrot;
-      }
-   }
+    /// <summary>
+    /// Represents a Carrot authentication status for a user.
+    /// </summary>
+    public enum AuthStatus : int
+    {
+        /// <summary>The current user has not yet authorized the app, or has deauthorized the app.</summary>
+        NotAuthorized = -1,
 
-   /// <summary>
-   /// Return the string value of an <see cref="AuthStatus"/> value.
-   /// </summary>
-   /// <returns>The string description of an <see cref="AuthStatus"/>.</returns>
-   public static string authStatusString(GoCarrotInc.Carrot.AuthStatus authStatus)
-   {
-      switch(authStatus)
-      {
-         case GoCarrotInc.Carrot.AuthStatus.NotAuthorized: return "Carrot user has not authorized the application.";
-         case GoCarrotInc.Carrot.AuthStatus.Undetermined: return "Carrot user status is undetermined.";
-         case GoCarrotInc.Carrot.AuthStatus.ReadOnly: return "Carrot user has not allowed the 'publish_actions' permission.";
-         case GoCarrotInc.Carrot.AuthStatus.Ready: return "Carrot user is authorized.";
-         default: return "Invalid Carrot AuthStatus.";
-      }
-   }
+        /// <summary>The current authentication status has not been determined.</summary>
+        Undetermined = 0,
 
-   /// <summary>
-   /// The delegate type for the <see cref="AuthenticationStatusChanged"/> event.
-   /// </summary>
-   /// <param name="sender">The object which dispatched the <see cref="AuthenticationStatusChanged"/> event.</param>
-   /// <param name="status">The new authentication status.</param>
-   public delegate void AuthenticationStatusChangedHandler(object sender, GoCarrotInc.Carrot.AuthStatus status);
+        /// <summary>The current user has not granted the 'publish_actions' permission, or has removed the permission.</summary>
+        ReadOnly = 1,
 
-   /// <summary>
-   /// The delegate type for the <see cref="ApplicationLinkReceived"/> event.
-   /// </summary>
-   /// <param name="sender">The object which dispatched the <see cref="ApplicationLinkReceived"/> event.</param>
-   /// <param name="targetURL">The target URL specified by the deep-link.</param>
-   public delegate void ApplicationLinkReceivedHandler(object sender, string targetURL);
+        /// <summary>The current user has granted all needed permissions and Carrot will send events to the Carrot server.</summary>
+        Ready = 2
+    }
 
-   /// <summary>
-   /// An event which will notify listeners when the authentication status for the Carrot user has changed.
-   /// </summary>
-   public static event AuthenticationStatusChangedHandler AuthenticationStatusChanged;
+    /// <summary>
+    /// Responses to Carrot requests.
+    /// </summary>
+    public enum Response
+    {
+        /// <summary>Successful.</summary>
+        OK,
 
-   /// <summary>
-   /// An event which will notify listeners when the application recieves a deep-link from Facebook.
-   /// </summary>
-   /// <remarks>
-   /// For more information about deep-linking see: https://developers.facebook.com/blog/post/2012/02/21/improving-app-distribution-on-ios/
-   /// </remarks>
-   public static event ApplicationLinkReceivedHandler ApplicationLinkReceived;
+        /// <summary>User has not authorized 'publish_actions', read only.</summary>
+        ReadOnly,
 
-   /// <summary>
-   /// A C# bridge to the native Carrot SDK.
-   /// </summary>
-   public class CarrotBridge : IDisposable
-   {
-      /// <summary>
-      /// Construct a C# bridge to the native Carrot SDK.
-      /// </summary>
-      /// <param name="appId">Facebook Application Id.</param>
-      /// <param name="appSecret">Carrot Application Secret.</param>
-      public CarrotBridge(string appId, string appSecret)
-      {
-         mIsDisposed = false;
-#if UNITY_ANDROID && !UNITY_EDITOR
-         string hostname = "";
-         string debugUDID = "";
+        /// <summary>Service tier exceeded, not posted.</summary>
+        UserLimitHit,
 
-         using(AndroidJavaClass playerClass = new AndroidJavaClass("com.unity3d.player.UnityPlayer"))
-         {
-            using(AndroidJavaObject activity = playerClass.GetStatic<AndroidJavaObject>("currentActivity"),
-                                    appIdString = new AndroidJavaObject("java.lang.String", appId),
-                                    appSecretString = new AndroidJavaObject("java.lang.String", appSecret),
-                                    hostnameString = new AndroidJavaObject("java.lang.String", hostname),
-                                    debugUDIDString = new AndroidJavaObject("java.lang.String", debugUDID))
+        /// <summary>Authentication error, app secret incorrect.</summary>
+        BadAppSecret,
+
+        /// <summary>Resource not found.</summary>
+        NotFound,
+
+        /// <summary>User is not authorized for Facebook App.</summary>
+        NotAuthorized,
+
+        /// <summary>Dynamic OG object not created due to parameter error.</summary>
+        ParameterError,
+
+        /// <summary>Undetermined error.</summary>
+        UnknownError
+    }
+
+    /// <summary>
+    /// Carrot debug users which can be assigned to UserId in order to simulate
+    /// different cases for use.
+    /// </summary>
+    public class DebugUser
+    {
+        /// <summary>A user which never exists.</summary>
+        public static readonly string NoSuchUser = "nosuchuser";
+
+        /// <summary>A user which has not authorized the 'publish_actions' permission.</summary>
+        public static readonly string ReadOnlyUser = "nopublishactions";
+
+        /// <summary>A user which deauthorized the Facebook application.</summary>
+        public static readonly string DeauthorizedUser = "deauthorized";
+    }
+
+    /// <summary>
+    /// Return the string value of an <see cref="AuthStatus"/> value.
+    /// </summary>
+    /// <returns>The string description of an <see cref="AuthStatus"/>.</returns>
+    public static string authStatusString(AuthStatus authStatus)
+    {
+        switch(authStatus)
+        {
+            case Carrot.AuthStatus.NotAuthorized: return "Carrot user has not authorized the application.";
+            case Carrot.AuthStatus.Undetermined: return "Carrot user status is undetermined.";
+            case Carrot.AuthStatus.ReadOnly: return "Carrot user has not allowed the 'publish_actions' permission.";
+            case Carrot.AuthStatus.Ready: return "Carrot user is authorized.";
+            default: return "Invalid Carrot AuthStatus.";
+        }
+    }
+
+    /// <summary>
+    /// The delegate type for the <see cref="AuthenticationStatusChanged"/> event.
+    /// </summary>
+    /// <param name="sender">The object which dispatched the <see cref="AuthenticationStatusChanged"/> event.</param>
+    /// <param name="status">The new authentication status.</param>
+    public delegate void AuthenticationStatusChangedHandler(object sender, AuthStatus status);
+
+    /// <summary>
+    /// An event which will notify listeners when the authentication status for the Carrot user has changed.
+    /// </summary>
+    public static event AuthenticationStatusChangedHandler AuthenticationStatusChanged;
+
+    /// <summary>
+    /// The callback delegate type for Carrot requests.
+    /// </summary>
+    public delegate void CarrotRequestResponse(Response response, string errorText);
+
+    /// <summary>
+    /// Check the authentication status of the current Carrot user.
+    /// </summary>
+    /// <value>The <see cref="GoCarrotInc.Carrot.AuthStatus"/> of the current Carrot user.</value>
+    public AuthStatus Status
+    {
+        get
+        {
+            return mAuthStatus;
+        }
+        private set
+        {
+            if(AuthenticationStatusChanged != null && mAuthStatus != value)
             {
-               mCarrot = new AndroidJavaObject("com.CarrotInc.Carrot.Carrot", activity, appIdString,
-                                               appSecretString, hostnameString, debugUDIDString);
+                mAuthStatus = value;
+                AuthenticationStatusChanged(this, mAuthStatus);
             }
-         }
-#elif UNITY_EDITOR || (!UNITY_ANDROID && !UNITY_IPHONE)
-         mCarrot = new GoCarrotInc.Carrot(appId, appSecret, null);
-         mAuthStatusUpdates = new List<GoCarrotInc.Carrot.AuthStatus>();
-#endif
-      }
+        }
+    }
 
-      /// <summary>
-      /// Check the authentication status of the current Carrot user.
-      /// </summary>
-      /// <value>The <see cref="GoCarrotInc.Carrot.AuthStatus"/> of the current Carrot user.</value>
-      public GoCarrotInc.Carrot.AuthStatus Status
-      {
-         get
-         {
-#if UNITY_ANDROID  && !UNITY_EDITOR
-            return (GoCarrotInc.Carrot.AuthStatus)mCarrot.Call<int>("getStatus");
-#elif UNITY_IPHONE && !UNITY_EDITOR
-            return (GoCarrotInc.Carrot.AuthStatus)Carrot_AuthStatus();
-#else
-            return mCarrot.Status;
-#endif
-         }
-      }
-
-#if UNITY_EDITOR || (!UNITY_ANDROID && !UNITY_IPHONE)
-      /// <summary>
-      /// The user id for the current Carrot user.
-      /// </summary>
-      /// <value>The user id of the current Carrot user.</value>
-      public string UserId
-      {
-         get
-         {
-            return mCarrot.UserId;
-         }
-         set
-         {
-            mCarrot.UserId = value;
-         }
-      }
-#endif
-
-      /// <summary>
-      /// Assign a Facebook user access token to allow posting of Carrot events.
-      /// </summary>
-      /// <param name="accessToken">Facebook user access token.</param>
-      public void setAccessToken(string accessToken)
-      {
-#if UNITY_ANDROID && !UNITY_EDITOR
-         using(AndroidJavaObject accessTokenString = new AndroidJavaObject("java.lang.String", accessToken))
-         {
-            mCarrot.Call("setAccessToken", accessTokenString);
-         }
-#elif UNITY_IPHONE && !UNITY_EDITOR
-         Carrot_SetAccessToken(accessToken);
-#else
-         mCarrot.validateUserAsync(accessToken);
-#endif
-      }
-
-      /// <summary>
-      /// Post an achievement to Carrot.
-      /// </summary>
-      /// <param name="achievementId">Carrot achievement id.</param>
-      /// <returns><c>true</c> if the achievement request has been cached, and will be sent to the server; <c>false</c> otherwise.</returns>
-      public bool postAchievement(string achievementId)
-      {
-#if UNITY_ANDROID && !UNITY_EDITOR
-         using(AndroidJavaObject achievementIdString = new AndroidJavaObject("java.lang.String", achievementId))
-         {
-            return mCarrot.Call<bool>("postAchievement", achievementIdString);
-         }
-#elif UNITY_IPHONE && !UNITY_EDITOR
-         return (Carrot_PostAchievement(achievementId) == 1);
-#else
-         mCarrot.postAchievementAsync(achievementId);
-         return true;
-#endif
-      }
-
-      /// <summary>
-      /// Post a high score to Carrot.
-      /// </summary>
-      /// <param name="score">Score.</param>
-      /// <returns><c>true</c> if the high score request has been cached, and will be sent to the server; <c>false</c> otherwise.</returns>
-      public bool postHighScore(uint score)
-      {
-#if UNITY_ANDROID && !UNITY_EDITOR
-         return mCarrot.Call<bool>("postHighScore", (int)score);
-#elif UNITY_IPHONE && !UNITY_EDITOR
-         return (Carrot_PostHighScore(score) == 1);
-#else
-         mCarrot.postHighScoreAsync(score);
-         return true;
-#endif
-      }
-
-      /// <summary>
-      /// Sends an Open Graph action which will use an existing object.
-      /// </summary>
-      /// <param name="actionId">Carrot action id.</param>
-      /// <param name="objectInstanceId">Carrot object instance id.</param>
-      public bool postAction(string actionId, string objectInstanceId)
-      {
-         return postAction(actionId, null, objectInstanceId);
-      }
-
-      /// <summary>
-      /// Sends an Open Graph action which will use an existing object.
-      /// </summary>
-      /// <param name="actionId">Carrot action id.</param>
-      /// <param name="actionProperties">Parameters to be submitted with the action.</param>
-      /// <param name="objectInstanceId">Carrot object instance id.</param>
-      public bool postAction(string actionId, IDictionary actionProperties, string objectInstanceId)
-      {
-#if UNITY_ANDROID && !UNITY_EDITOR
-         string actionPropertiesJson = (actionProperties == null ? "" : Json.Serialize(actionProperties));
-         using(AndroidJavaObject actionIdString = new AndroidJavaObject("java.lang.String", actionId),
-                                 actionPropertiesString = new AndroidJavaObject("java.lang.String", actionPropertiesJson),
-                                 objectInstanceIdString = new AndroidJavaObject("java.lang.String", objectInstanceId))
-         {
-            return mCarrot.Call<bool>("postJsonAction", actionIdString, actionPropertiesString, objectInstanceIdString);
-         }
-#elif UNITY_IPHONE && !UNITY_EDITOR
-         string actionPropertiesJson = (actionProperties == null ? null : Json.Serialize(actionProperties));
-         return (Carrot_PostInstanceAction(actionId, actionPropertiesJson, objectInstanceId) == 1);
-#else
-         mCarrot.postActionAsync(actionId, actionProperties, objectInstanceId);
-         return true;
-#endif
-      }
-
-      /// <summary>
-      /// Sends an Open Graph action which will create a new object from the properties provided.
-      /// </summary>
-      /// <param name="actionId">Carrot action id.</param>
-      /// <param name="objectId">Carrot object id.</param>
-      /// <param name="objectProperties">Parameters to be submitted with the action.</param>
-      /// <param name="objectInstanceId">Object instance id to create or re-use.</param>
-      public bool postAction(string actionId, string objectId, IDictionary objectProperties, string objectInstanceId = null)
-      {
-         return postAction(actionId, null, objectId, objectProperties, objectInstanceId);
-      }
-
-      /// <summary>
-      /// Sends an Open Graph action which will create a new object from the properties provided.
-      /// </summary>
-      /// <param name="actionId">Carrot action id.</param>
-      /// <param name="actionProperties">Parameters to be submitted with the action.</param>
-      /// <param name="objectId">Carrot object id.</param>
-      /// <param name="objectProperties">Parameters to be submitted with the action.</param>
-      /// <param name="objectInstanceId">Object instance id to create or re-use.</param>
-      /// <returns><c>true</c> if the action request has been cached, and will be sent to the server; <c>false</c> otherwise.</returns>
-      public bool postAction(string actionId, IDictionary actionProperties, string objectId, IDictionary objectProperties, string objectInstanceId = null)
-      {
-#if UNITY_ANDROID && !UNITY_EDITOR
-         string objectPropertiesJson = Json.Serialize(objectProperties);
-         if(objectInstanceId == null) objectInstanceId = "";
-         string actionPropertiesJson = (actionProperties == null ? "" : Json.Serialize(actionProperties));
-         using(AndroidJavaObject actionIdString = new AndroidJavaObject("java.lang.String", actionId),
-                                 actionPropertiesString = new AndroidJavaObject("java.lang.String", actionPropertiesJson),
-                                 objectIdString = new AndroidJavaObject("java.lang.String", objectId),
-                                 objectPropertiesString = new AndroidJavaObject("java.lang.String", objectPropertiesJson),
-                                 objectInstanceIdString = new AndroidJavaObject("java.lang.String", objectInstanceId))
-         {
-            return mCarrot.Call<bool>("postJsonAction", actionIdString, actionPropertiesString, objectIdString, objectPropertiesString, objectInstanceIdString);
-         }
-#elif UNITY_IPHONE && !UNITY_EDITOR
-         string objectPropertiesJson = Json.Serialize(objectProperties);
-         string actionPropertiesJson = (actionProperties == null ? null : Json.Serialize(actionProperties));
-         return (Carrot_PostCreateAction(actionId, actionPropertiesJson, objectId, objectPropertiesJson, objectInstanceId) == 1);
-#else
-         mCarrot.postActionAsync(actionId, actionProperties, objectId, objectProperties, objectInstanceId);
-         return true;
-#endif
-      }
-
-      /// <summary>
-      /// Post a 'Like' action that likes the Game's Facebook Page.
-      /// </summary>
-      /// <returns><c>true</c> if the action request has been cached, and will be sent to the server; <c>false</c> otherwise.</returns>
-      public bool likeGame()
-      {
-#if UNITY_ANDROID && !UNITY_EDITOR
-         return mCarrot.Call<bool>("likeGame");
-#elif UNITY_IPHONE && !UNITY_EDITOR
-         return (Carrot_LikeGame() == 1);
-#else
-         mCarrot.likeGameAsync();
-         return true;
-#endif
-      }
-
-      /// <summary>
-      /// Post a 'Like' action that likes the Publisher's Facebook Page.
-      /// </summary>
-      /// <returns><c>true</c> if the action request has been cached, and will be sent to the server; <c>false</c> otherwise.</returns>
-      public bool likePublisher()
-      {
-#if UNITY_ANDROID && !UNITY_EDITOR
-         return mCarrot.Call<bool>("likePublisher");
-#elif UNITY_IPHONE && !UNITY_EDITOR
-         return (Carrot_LikePublisher() == 1);
-#else
-         mCarrot.likePublisherAsync();
-         return true;
-#endif
-      }
-
-      /// <summary>
-      /// Post a 'Like' action that likes an achievement.
-      /// </summary>
-      /// <param name="achievementId">The achievement identifier.</param>
-      /// <returns><c>true</c> if the action request has been cached, and will be sent to the server; <c>false</c> otherwise.</returns>
-      public bool likeAchievement(string achievementId)
-      {
-#if UNITY_ANDROID && !UNITY_EDITOR
-         using(AndroidJavaObject achievementIdString = new AndroidJavaObject("java.lang.String", achievementId))
-         {
-            return mCarrot.Call<bool>("likeAchievement", achievementIdString);
-         }
-#elif UNITY_IPHONE && !UNITY_EDITOR
-         return (Carrot_LikeAchievement(achievementId) == 1);
-#else
-         mCarrot.likeAchievementAsync(achievementId);
-         return true;
-#endif
-      }
-
-      /// <summary>
-      /// Post a 'Like' action that likes an Open Graph object.
-      /// </summary>
-      /// <param name="objectId">The instance id of the Carrot object.</param>
-      /// <returns><c>true</c> if the action request has been cached, and will be sent to the server; <c>false</c> otherwise.</returns>
-      public bool likeObject(string objectId)
-      {
-#if UNITY_ANDROID && !UNITY_EDITOR
-         using(AndroidJavaObject objectIdString = new AndroidJavaObject("java.lang.String", objectId))
-         {
-            return mCarrot.Call<bool>("likeObject", objectIdString);
-         }
-#elif UNITY_IPHONE && !UNITY_EDITOR
-         return (Carrot_LikeObject(objectId) == 1);
-#else
-         mCarrot.likeObjectAsync(objectId);
-         return true;
-#endif
-      }
-
-      /// <summary>
-      /// Perform Facebook Authentication.
-      /// </summary>
-      /// <param name="allowLoginUI">Allow the login UI to be shown if the Application is not authenticated.</param>
-      /// <param name="permission">Specify the permissions being requested. FB standards suggest that you should first ask only for read permissions, and then ask for write permissions at the time when they are needed.</param>
-      /// <returns><c>false</c> if there are no Facebook accounts registered with the device (iOS 6 only), or the Intent was not defined in AndroidManifest.xml (Android only); <c>true</c> otherwise.</returns>
-      public bool doFacebookAuth(bool allowLoginUI = true, FacebookAuthPermission permission = FacebookAuthPermission.Read)
-      {
-#if UNITY_ANDROID && !UNITY_EDITOR
-         return mCarrot.Call<bool>("doFacebookAuth", allowLoginUI, (int)permission);
-#elif UNITY_IPHONE && !UNITY_EDITOR
-         return (Carrot_DoFacebookAuth(allowLoginUI ? 1 : 0, (int)permission) == 1);
-#elif UNITY_EDITOR
-         Debug.Log("Carrot::doFacebookAuth");
-         return true;
-#else
-         Debug.Log("Carrot Facebook Authentication wrapping is not available outside of iOS/Android.");
-         return false;
-#endif
-      }
-
-#if UNITY_ANDROID && !UNITY_EDITOR
-      internal void setActivity()
-      {
-         using(AndroidJavaClass playerClass = new AndroidJavaClass("com.unity3d.player.UnityPlayer"))
-         {
-            using(AndroidJavaObject activity = playerClass.GetStatic<AndroidJavaObject>("currentActivity"))
+    /// <summary>
+    /// The user id for the current Carrot user.
+    /// </summary>
+    /// <value>The user id of the current Carrot user.</value>
+    public string UserId
+    {
+        get
+        {
+            return mUserId;
+        }
+        set
+        {
+            if(mUserId != value)
             {
-               mCarrot.Call("setActivity", activity);
+                mUserId = value;
+                this.Status = AuthStatus.Undetermined;
             }
-         }
-      }
-#endif
+        }
+    }
 
-      internal void setDelegateObject(Carrot delegateObject)
-      {
-#if UNITY_ANDROID && !UNITY_EDITOR
-         mDelegateObject = delegateObject;
-         mCarrot.Call("setUnityHandler", mDelegateObject.name);
-#elif UNITY_IPHONE && !UNITY_EDITOR
-         mDelegateObject = delegateObject;
-         Carrot_AssignUnityDelegate(mDelegateObject.name);
-#else
-         mCarrot.AuthenticationStatusChanged += (object sender, GoCarrotInc.Carrot.AuthStatus status) => {
-            lock(mAuthStatusUpdates)
+    /// <summary>
+    /// Validate a Facebook user to allow posting of Carrot events.
+    /// </summary>
+    /// <remarks>
+    /// This method will trigger notification of authentication status using the <see cref="AuthenticationStatusChanged"/> event.
+    /// </remarks>
+    /// <param name="accessTokenOrFacebookId">Facebook user access token or Facebook User Id.</param>
+    public void validateUser(string accessTokenOrFacebookId)
+    {
+        StartCoroutine(validateUserCoroutine(accessTokenOrFacebookId));
+    }
+
+    /// <summary>
+    /// Post an achievement to Carrot.
+    /// </summary>
+    /// <param name="achievementId">Carrot achievement id.</param>
+    /// <param name="callback">Optional <see cref="CarrotRequestResponse"/> which will be used to deliver the reply.</param>
+    public void postAchievement(string achievementId, CarrotRequestResponse callback = null)
+    {
+        if(string.IsNullOrEmpty(achievementId))
+        {
+            throw new ArgumentNullException("achievementId must not be null or empty string.", "achievementId");
+        }
+
+        StartCoroutine(signedRequestCoroutine("POST", "/me/achievements.json", new Dictionary<string, object>() {
+                {"achievement_id", achievementId}
+        }, callback));
+    }
+
+    /// <summary>
+    /// Post a high score to Carrot.
+    /// </summary>
+    /// <param name="score">Score.</param>
+    /// <param name="callback">Optional <see cref="CarrotRequestResponse"/> which will be used to deliver the reply.</param>
+    public void postHighScore(uint score, CarrotRequestResponse callback = null)
+    {
+        StartCoroutine(signedRequestCoroutine("POST", "/me/scores.json", new Dictionary<string, object>() {
+                {"value", score}
+        }, callback));
+    }
+
+    /// <summary>
+    /// Sends an Open Graph action which will use an existing object.
+    /// </summary>
+    /// <param name="actionId">Carrot action id.</param>
+    /// <param name="objectInstanceId">Carrot object instance id.</param>
+    /// <param name="callback">Optional <see cref="CarrotRequestResponse"/> which will be used to deliver the reply.</param>
+    public void postAction(string actionId, string objectInstanceId, CarrotRequestResponse callback = null)
+    {
+        postAction(actionId, null, objectInstanceId, callback);
+    }
+
+    /// <summary>
+    /// Sends an Open Graph action which will use an existing object.
+    /// </summary>
+    /// <param name="actionId">Carrot action id.</param>
+    /// <param name="actionProperties">Parameters to be submitted with the action.</param>
+    /// <param name="objectInstanceId">Carrot object instance id.</param>
+    /// <param name="callback">Optional <see cref="CarrotRequestResponse"/> which will be used to deliver the reply.</param>
+    public void postAction(string actionId, IDictionary actionProperties, string objectInstanceId,
+                           CarrotRequestResponse callback = null)
+    {
+        if(string.IsNullOrEmpty(objectInstanceId))
+        {
+            throw new ArgumentNullException("objectInstanceId must not be null or empty string.", "objectInstanceId");
+        }
+
+        if(string.IsNullOrEmpty(actionId))
+        {
+            throw new ArgumentNullException("actionId must not be null or empty string.", "actionId");
+        }
+
+        Dictionary<string, object> parameters = new Dictionary<string, object>() {
+            {"action_id", actionId},
+            {"action_properties", actionProperties == null ? new Dictionary<string, object>() : actionProperties},
+            {"object_properties", new Dictionary<string, object>()}
+        };
+        if(objectInstanceId != null) parameters["object_instance_id"] = objectInstanceId;
+
+        StartCoroutine(signedRequestCoroutine("POST", "/me/actions.json", parameters, callback));
+    }
+
+    /// <summary>
+    /// Sends an Open Graph action which will create a new object from the properties provided.
+    /// </summary>
+    /// <param name="actionId">Carrot action id.</param>
+    /// <param name="objectId">Carrot object id.</param>
+    /// <param name="objectProperties">Parameters to be submitted with the action.</param>
+    /// <param name="objectInstanceId">Object instance id to create or re-use.</param>
+    /// <param name="callback">Optional <see cref="CarrotRequestResponse"/> which will be used to deliver the reply.</param>
+    public void postAction(string actionId, string objectId, IDictionary objectProperties,
+                           string objectInstanceId = null, CarrotRequestResponse callback = null)
+    {
+        postAction(actionId, null, objectId, objectProperties, objectInstanceId, callback);
+    }
+
+    /// <summary>
+    /// Sends an Open Graph action which will create a new object from the properties provided.
+    /// </summary>
+    /// <param name="actionId">Carrot action id.</param>
+    /// <param name="actionProperties">Parameters to be submitted with the action.</param>
+    /// <param name="objectId">Carrot object id.</param>
+    /// <param name="objectProperties">Parameters to be submitted with the action.</param>
+    /// <param name="objectInstanceId">Object instance id to create or re-use.</param>
+    /// <param name="callback">Optional <see cref="CarrotRequestResponse"/> which will be used to deliver the reply.</param>
+    public void postAction(string actionId, IDictionary actionProperties, string objectId,
+                           IDictionary objectProperties, string objectInstanceId = null,
+                           CarrotRequestResponse callback = null)
+    {
+        if(string.IsNullOrEmpty(objectId))
+        {
+            throw new ArgumentNullException("objectId must not be null or empty string.", "objectId");
+        }
+
+        if(string.IsNullOrEmpty(actionId))
+        {
+            throw new ArgumentNullException("actionId must not be null or empty string.", "actionId");
+        }
+
+        if(objectProperties == null)
+        {
+            throw new ArgumentNullException("objectProperties must not be null.", "objectProperties");
+        }
+        else if(!objectProperties.Contains("title") ||
+                !objectProperties.Contains("description") ||
+                !objectProperties.Contains("image_url"))
+        {
+            throw new ArgumentException("objectProperties must contain keys for 'title', 'description', and 'image_url'.", "objectProperties");
+        }
+
+        objectProperties["object_type"] = objectId;
+        if(!string.IsNullOrEmpty(objectInstanceId)) objectProperties["object_instance_id"] = objectInstanceId;
+        Dictionary<string, object> parameters = new Dictionary<string, object>() {
+            {"action_id", actionId},
+            {"action_properties", actionProperties == null ? new Dictionary<string, object>() : actionProperties},
+            {"object_properties", objectProperties}
+        };
+        StartCoroutine(signedRequestCoroutine("POST", "/me/actions.json", parameters, callback));
+    }
+
+    /// <summary>
+    /// Post a 'Like' action that likes the Game's Facebook Page.
+    /// </summary>
+    /// <param name="callback">Optional <see cref="CarrotRequestResponse"/> which will be used to deliver the reply.</param>
+    public void likeGame(CarrotRequestResponse callback = null)
+    {
+        StartCoroutine(signedRequestCoroutine("POST", "/me/like.json", new Dictionary<string, object>() {
+            {"object", "game"}
+        }, callback));
+    }
+
+    /// <summary>
+    /// Post a 'Like' action that likes the Publisher's Facebook Page.
+    /// </summary>
+    /// <param name="callback">Optional <see cref="CarrotRequestResponse"/> which will be used to deliver the reply.</param>
+    public void likePublisher(CarrotRequestResponse callback = null)
+    {
+        StartCoroutine(signedRequestCoroutine("POST", "/me/like.json", new Dictionary<string, object>() {
+            {"object", "publisher"}
+        }, callback));
+    }
+
+    /// <summary>
+    /// Post a 'Like' action that likes an achievement.
+    /// </summary>
+    /// <param name="achievementId">The achievement identifier.</param>
+    /// <param name="callback">Optional <see cref="CarrotRequestResponse"/> which will be used to deliver the reply.</param>
+    public void likeAchievement(string achievementId, CarrotRequestResponse callback = null)
+    {
+        if(string.IsNullOrEmpty(achievementId))
+        {
+            throw new ArgumentNullException("achievementId must not be null or empty string.", "achievementId");
+        }
+
+        StartCoroutine(signedRequestCoroutine("POST", "/me/like.json", new Dictionary<string, object>() {
+            {"object", "achievement:" + achievementId}
+        }, callback));
+    }
+
+    /// <summary>
+    /// Post a 'Like' action that likes an Open Graph object.
+    /// </summary>
+    /// <param name="objectId">The instance id of the Carrot object.</param>
+    /// <param name="callback">Optional <see cref="CarrotRequestResponse"/> which will be used to deliver the reply.</param>
+    public void likeObject(string objectId, CarrotRequestResponse callback = null)
+    {
+        if(string.IsNullOrEmpty(objectId))
+        {
+            throw new ArgumentNullException("objectId must not be null or empty string.", "objectId");
+        }
+
+        StartCoroutine(signedRequestCoroutine("POST", "/me/like.json", new Dictionary<string, object>() {
+            {"object", "object:" + objectId}
+        }, callback));
+    }
+
+    #region MonoBehaviour
+    /// @cond hide_from_doxygen
+    void Start()
+    {
+        mInstance = this;
+        DontDestroyOnLoad(this);
+    }
+
+    void OnApplicationQuit()
+    {
+        Destroy(this);
+    }
+    /// @endcond
+    #endregion
+
+    #region Carrot request coroutines
+    /// @cond hide_from_doxygen
+    private IEnumerator validateUserCoroutine(string accessTokenOrFacebookId)
+    {
+        AuthStatus ret = AuthStatus.Undetermined;
+        if(string.IsNullOrEmpty(mUserId))
+        {
+            throw new NullReferenceException("UserId is empty. Assign a UserId before calling validateUser");
+        }
+
+        ServicePointManager.ServerCertificateValidationCallback = CarrotCertValidator;
+
+        UnityEngine.WWWForm payload = new UnityEngine.WWWForm();
+        payload.AddField("access_token", accessTokenOrFacebookId);
+        payload.AddField("api_key", mUserId);
+
+        UnityEngine.WWW request = new UnityEngine.WWW(String.Format("https://{0}/games/{1}/users.json", mHostname, FacebookAppId), payload);
+        yield return request;
+
+        int statusCode = 0;
+        if(request.error != null)
+        {
+            Match match = Regex.Match(request.error, "^([0-9]+)");
+            if(match.Success)
             {
-               mAuthStatusUpdates.Add(status);
+                statusCode = int.Parse(match.Value);
             }
-         };
-#endif
-      }
-
-      /// @cond hide_from_doxygen
-      #region IDisposable
-      public void Dispose()
-      {
-         Dispose(true);
-         GC.SuppressFinalize(this);
-      }
-
-      protected virtual void Dispose(bool disposing)
-      {
-         if(!mIsDisposed)
-         {
-#if UNITY_ANDROID && !UNITY_EDITOR
-            if(disposing)
+            else
             {
-               if(mCarrot != null)
-               {
-                  mCarrot.Call("close");
-                  mCarrot.Dispose();
-                  mCarrot = null;
-               }
+                Debug.Log(request.error);
             }
-#endif
-         }
-         mIsDisposed = true;
-      }
+        }
+        else
+        {
+            // TODO: Change if JSON updates to include code
+            // Dictionary<string, object> reply = Json.Deserialize(request.text) as Dictionary<string, object>;
+            // statusCode = (int)((long)reply["code"]);
+            statusCode = 200;
+        }
 
-      ~CarrotBridge()
-      {
-         Dispose(false);
-      }
-      #endregion
-      /// @endcond
+        switch(statusCode)
+        {
+            case 201:
+            case 200: // Successful
+                ret = AuthStatus.Ready;
+                break;
 
-#if UNITY_IPHONE && !UNITY_EDITOR
-      #region Dll Imports
-      private const string DLL_IMPORT_TARGET = "__Internal";
+            case 401: // User has not authorized 'publish_actions', read only
+                ret = AuthStatus.ReadOnly;
+                break;
 
-      [DllImport(DLL_IMPORT_TARGET)]
-      private extern static int Carrot_AuthStatus();
+            case 404:
+            case 405: // User is not authorized for Facebook App
+            case 422: // User was not created
+                ret = AuthStatus.NotAuthorized;
+                break;
+        }
+        this.Status = ret;
 
-      [DllImport(DLL_IMPORT_TARGET)]
-      private extern static void Carrot_SetAccessToken(
-         [MarshalAs(UnmanagedType.LPStr)] string accessToken);
+        yield return ret;
+    }
 
-      [DllImport(DLL_IMPORT_TARGET)]
-      private extern static int Carrot_PostAchievement(
-         [MarshalAs(UnmanagedType.LPStr)] string achievementId);
+    private IEnumerator signedRequestCoroutine(string method, string endpoint,
+                                               IDictionary<string, object> parameters,
+                                               CarrotRequestResponse callback = null)
+    {
+        Response ret = Response.UnknownError;
+        string errorText = null;
 
-      [DllImport(DLL_IMPORT_TARGET)]
-      private extern static void Carrot_GetUserAchievementsUnity(
-         [MarshalAs(UnmanagedType.LPStr)] string objectName);
+        if(string.IsNullOrEmpty(mUserId))
+        {
+            throw new NullReferenceException("UserId is empty. Assign a UserId before calling validateUser");
+        }
 
-      [DllImport(DLL_IMPORT_TARGET)]
-      private extern static int Carrot_PostHighScore(uint score);
+        ServicePointManager.ServerCertificateValidationCallback = CarrotCertValidator;
 
-      [DllImport(DLL_IMPORT_TARGET)]
-      private extern static void Carrot_GetFriendScoresUnity(
-         [MarshalAs(UnmanagedType.LPStr)] string objectName);
+        Dictionary<string, object> urlParams = new Dictionary<string, object> {
+            {"api_key", mUserId},
+            {"game_id", FacebookAppId},
+            {"request_date", (int)((DateTime.UtcNow - new DateTime(1970, 1, 1, 0, 0, 0, 0).ToLocalTime()).TotalSeconds)},
+            {"request_id", System.Guid.NewGuid().ToString()}
+        };
 
-      [DllImport(DLL_IMPORT_TARGET)]
-      private extern static int Carrot_PostInstanceAction(
-         [MarshalAs(UnmanagedType.LPStr)] string actionId,
-         [MarshalAs(UnmanagedType.LPStr)] string actionPropertiesJson,
-         [MarshalAs(UnmanagedType.LPStr)] string objectInstanceId);
-
-      [DllImport(DLL_IMPORT_TARGET)]
-      private extern static int Carrot_PostCreateAction(
-         [MarshalAs(UnmanagedType.LPStr)] string actionId,
-         [MarshalAs(UnmanagedType.LPStr)] string actionPropertiesJson,
-         [MarshalAs(UnmanagedType.LPStr)] string objectId,
-         [MarshalAs(UnmanagedType.LPStr)] string objectPropertiesJson,
-         [MarshalAs(UnmanagedType.LPStr)] string objectInstanceId);
-
-      [DllImport(DLL_IMPORT_TARGET)]
-      private extern static int Carrot_DoFacebookAuth(
-         int allowLoginUI, int permission);
-
-      [DllImport(DLL_IMPORT_TARGET)]
-      private extern static void Carrot_AssignUnityDelegate(
-         [MarshalAs(UnmanagedType.LPStr)] string objectName);
-
-      [DllImport(DLL_IMPORT_TARGET)]
-      private extern static int Carrot_LikeGame();
-
-      [DllImport(DLL_IMPORT_TARGET)]
-      private extern static int Carrot_LikePublisher();
-
-      [DllImport(DLL_IMPORT_TARGET)]
-      private extern static int Carrot_LikeAchievement(
-         [MarshalAs(UnmanagedType.LPStr)] string achievementId);
-
-      [DllImport(DLL_IMPORT_TARGET)]
-      private extern static int Carrot_LikeObject(
-         [MarshalAs(UnmanagedType.LPStr)] string objectId);
-
-      #endregion
-#endif
-
-      #region Member Variables
-#if UNITY_IPHONE && !UNITY_EDITOR
-      Carrot mDelegateObject;
-#elif UNITY_ANDROID && !UNITY_EDITOR
-      AndroidJavaObject mCarrot;
-      Carrot mDelegateObject;
-#elif UNITY_EDITOR || (!UNITY_ANDROID && !UNITY_IPHONE)
-      GoCarrotInc.Carrot mCarrot;
-      internal List<GoCarrotInc.Carrot.AuthStatus> mAuthStatusUpdates;
-#endif
-      bool mIsDisposed;
-      #endregion
-   }
-
-   #region MonoBehaviour
-   void Start()
-   {
-      mInstance = this;
-      DontDestroyOnLoad(this);
-      mCarrot = new CarrotBridge(FacebookAppId, CarrotAppSecret);
-      mCarrot.setDelegateObject(this);
-   }
-
-   void OnDestroy()
-   {
-      if(mCarrot != null) mCarrot.Dispose();
-   }
-
-#if UNITY_ANDROID && !UNITY_EDITOR
-   void OnApplicationPause(bool paused)
-   {
-      if(!paused)
-      {
-         mCarrot.setActivity();
-      }
-   }
-#endif
-
-#if UNITY_EDITOR && (!UNITY_ANDROID && !UNITY_IPHONE)
-   void FixedUpdate()
-   {
-      // Ensure the events are triggered from the main thread
-      if(mCarrot.mAuthStatusUpdates.Count > 0)
-      {
-         lock(mCarrot.mAuthStatusUpdates)
-         {
-            if(AuthenticationStatusChanged != null)
+        // Merge params
+        if(parameters != null)
+        {
+            foreach(KeyValuePair<string, object> entry in parameters)
             {
-               foreach(GoCarrotInc.Carrot.AuthStatus status in mCarrot.mAuthStatusUpdates)
-               {
-                  AuthenticationStatusChanged(this, status);
-               }
+                urlParams[entry.Key] = entry.Value;
             }
-            mCarrot.mAuthStatusUpdates.Clear();
-         }
-      }
-   }
-#endif
+        }
 
-   void OnApplicationQuit()
-   {
-      Destroy(this);
-   }
-   #endregion
+        // Build sorted list of key-value pairs
+        string[] keys = new string[urlParams.Keys.Count];
+        urlParams.Keys.CopyTo(keys, 0);
+        Array.Sort(keys);
+        List<string> kvList = new List<string>();
+        foreach(string key in keys)
+        {
+            string asStr;
+            if((asStr = urlParams[key] as string) != null)
+            {
+                kvList.Add(String.Format("{0}={1}", key, asStr));
+            }
+            else
+            {
+                kvList.Add(String.Format("{0}={1}", key,
+                    Json.Serialize(urlParams[key])));
+            }
+        }
+        string payload = String.Join("&", kvList.ToArray());
+        string signString = String.Format("{0}\n{1}\n{2}\n{3}", method, mHostname, endpoint, payload);
+        string sig = AWSSDKUtils.HMACSign(signString, CarrotAppSecret, KeyedHashAlgorithm.Create("HMACSHA256"));
 
-   /// @cond hide_from_doxygen
-   #region UnitySendMessage Handlers
-#if !UNITY_EDITOR && (UNITY_ANDROID || UNITY_IPHONE)
-   public void authenticationStatusChanged(string message)
-   {
-      AuthStatus updatedStatus = (AuthStatus)int.Parse(message);
-      if(Debug.isDebugBuild)
-      {
-         Debug.Log("[Carrot] Auth Status: " + Carrot.authStatusString(updatedStatus));
-      }
+        UnityEngine.WWWForm formPayload = new UnityEngine.WWWForm();
+        foreach(string key in keys)
+        {
+            string asStr;
+            if((asStr = urlParams[key] as string) != null)
+            {
+                formPayload.AddField(key, asStr);
+            }
+            else
+            {
+                formPayload.AddField(key,
+                    Json.Serialize(urlParams[key]));
+            }
+        }
+        formPayload.AddField("sig", sig);
 
-      if(AuthenticationStatusChanged != null)
-      {
-         AuthenticationStatusChanged(this, updatedStatus);
-      }
-   }
+        UnityEngine.WWW request = new UnityEngine.WWW(String.Format("https://{0}{1}", mHostname, endpoint), formPayload);
+        yield return request;
 
-   public void applicationLinkReceived(string message)
-   {
-      if(ApplicationLinkReceived != null)
-      {
-         ApplicationLinkReceived(this, message);
-      }
-   }
-#endif
-   #endregion
-   /// @endcond
+        int statusCode = 0;
+        if(request.error != null)
+        {
+            Match match = Regex.Match(request.error, "^([0-9]+)");
+            if(match.Success)
+            {
+                statusCode = int.Parse(match.Value);
+            }
+            else
+            {
+                errorText = request.error;
+                Debug.Log(request.error);
+            }
+        }
+        else
+        {
+            Dictionary<string, object> reply = Json.Deserialize(request.text) as Dictionary<string, object>;
+            statusCode = (int)((long)reply["code"]);
+        }
 
-   #region Member Variables
-   private CarrotBridge mCarrot;
-   private static Carrot mInstance = null;
-   #endregion
+        switch(statusCode)
+        {
+            case 201:
+            case 200: // Successful
+                ret = Response.OK;
+                this.Status = AuthStatus.Ready;
+                break;
+
+            case 401: // User has not authorized 'publish_actions', read only
+                ret = Response.ReadOnly;
+                this.Status = AuthStatus.ReadOnly;
+                break;
+
+            case 402: // Service tier exceeded, not posted
+                ret = Response.UserLimitHit;
+                this.Status = AuthStatus.Ready;
+                break;
+
+            case 403: // Authentication error, app secret incorrect
+                ret = Response.BadAppSecret;
+                this.Status = AuthStatus.Ready;
+                break;
+
+            case 404: // Resource not found
+                ret = Response.NotFound;
+                this.Status = AuthStatus.Ready;
+                break;
+
+            case 405: // User is not authorized for Facebook App
+                ret = Response.NotAuthorized;
+                this.Status = AuthStatus.NotAuthorized;
+                break;
+
+            case 424: // Dynamic OG object not created due to parameter error
+                ret = Response.ParameterError;
+                this.Status = AuthStatus.Ready;
+                break;
+        }
+        if(callback != null) callback(ret, errorText);
+    }
+    /// @endcond
+    #endregion
+
+    #region SSL Cert Validator
+    /// @cond hide_from_doxygen
+    private static bool CarrotCertValidator(object sender, X509Certificate certificate,
+                                            X509Chain chain, SslPolicyErrors sslPolicyErrors)
+    {
+        // This is not ideal
+        return true;
+    }
+    /// @endcond
+    #endregion
+
+    #region Member Variables
+    private static Carrot mInstance = null;
+    private AuthStatus mAuthStatus;
+    private string mUserId;
+    private string mHostname = "gocarrot.com";
+    #endregion
 }

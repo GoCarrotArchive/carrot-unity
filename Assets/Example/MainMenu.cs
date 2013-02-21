@@ -12,20 +12,19 @@ public class MainMenu : MonoBehaviour
    string achieveString = "achievement_id";
    string authStatus = "";
 
-   void AuthenticationStatusChangedHandler(object sender, GoCarrotInc.Carrot.AuthStatus status)
+   void AuthenticationStatusChangedHandler(object sender, Carrot.AuthStatus status)
    {
       authStatus = Carrot.authStatusString(status);
    }
 
    void Start()
    {
-      authStatus = Carrot.authStatusString(GoCarrotInc.Carrot.AuthStatus.Undetermined);
+      authStatus = Carrot.authStatusString(Carrot.AuthStatus.Undetermined);
 
       Carrot.AuthenticationStatusChanged += AuthenticationStatusChangedHandler;
 
-#if UNITY_EDITOR || (!UNITY_ANDROID && !UNITY_IPHONE)
       Carrot.Instance.UserId = "zerostride@gmail.com";
-#endif
+      Carrot.Instance.validateUser("532815528");
    }
 
    void OnGUI()
@@ -34,16 +33,6 @@ public class MainMenu : MonoBehaviour
 
       // Display auth status
       GUILayout.Label(authStatus);
-
-      // Facebook auth
-      GUILayout.Space(buttonSpacing);
-      if(GUILayout.Button("Facebook SSO", GUILayout.Height(buttonHeight)))
-      {
-         if(!Carrot.Instance.doFacebookAuth())
-         {
-            Debug.Log("Facebook SSO did not start successfully.");
-         }
-      }
 
       // High Score
       GUILayout.Space(buttonSpacing);
