@@ -19,108 +19,108 @@ using UnityEditor;
 
 public class CarrotSettings : EditorWindow
 {
-   public static string CarrotAppId
-   {
-      get
-      {
-         LoadSettings();
-         return mCarrotAppId;
-      }
-   }
+    public static string CarrotAppId
+    {
+        get
+        {
+            LoadSettings();
+            return mCarrotAppId;
+        }
+    }
 
-   public static string CarrotAppSecret
-   {
-      get
-      {
-         LoadSettings();
-         return mCarrotAppSecret;
-      }
-   }
+    public static string CarrotAppSecret
+    {
+        get
+        {
+            LoadSettings();
+            return mCarrotAppSecret;
+        }
+    }
 
-   [MenuItem("Edit/Carrot")]
-   public static void ShowWindow()
-   {
-      CarrotSettings settingsWindow = (CarrotSettings)GetWindow<CarrotSettings>(false, "Carrot Settings", false);
-      settingsWindow.Show();
-   }
+    [MenuItem("Edit/Carrot")]
+    public static void ShowWindow()
+    {
+        CarrotSettings settingsWindow = (CarrotSettings)GetWindow<CarrotSettings>(false, "Carrot Settings", false);
+        settingsWindow.Show();
+    }
 
-   void OnGUI()
-   {
-      GUILayout.Label("Settings", EditorStyles.boldLabel);
-      mCarrotAppId = EditorGUILayout.TextField("Carrot App Id", mCarrotAppId);
-      mCarrotAppSecret = EditorGUILayout.TextField("Carrot App Secret", mCarrotAppSecret);
+    void OnGUI()
+    {
+        GUILayout.Label("Settings", EditorStyles.boldLabel);
+        mCarrotAppId = EditorGUILayout.TextField("Carrot App Id", mCarrotAppId);
+        mCarrotAppSecret = EditorGUILayout.TextField("Carrot App Secret", mCarrotAppSecret);
 
-      if(!CarrotPostProcessScene.WillCreatePrefab)
-      {
-         if(GUILayout.Button("Create Carrot GameObject", GUILayout.Height(25)))
-         {
-            mCarrotGameObject = GameObject.Find("CarrotGameObject");
-            if(mCarrotGameObject == null)
+        if(!CarrotPostProcessScene.WillCreatePrefab)
+        {
+            if(GUILayout.Button("Create Carrot GameObject", GUILayout.Height(25)))
             {
-               Object prefab = AssetDatabase.LoadAssetAtPath("Assets/Carrot/CarrotGameObject.prefab", typeof(GameObject));
-               mCarrotGameObject =  PrefabUtility.InstantiatePrefab(prefab as GameObject) as GameObject;
+                mCarrotGameObject = GameObject.Find("CarrotGameObject");
+                if(mCarrotGameObject == null)
+                {
+                    Object prefab = AssetDatabase.LoadAssetAtPath("Assets/Carrot/CarrotGameObject.prefab", typeof(GameObject));
+                    mCarrotGameObject =  PrefabUtility.InstantiatePrefab(prefab as GameObject) as GameObject;
+                }
+                UpdateCarrotGameObject();
             }
-            UpdateCarrotGameObject();
-         }
-      }
+        }
 
-      if(GUILayout.Button("Get a Carrot Account", GUILayout.Height(25)))
-      {
-         Application.OpenURL("https://gocarrot.com/developers/sign_up?referrer=unity");
-      }
-   }
+        if(GUILayout.Button("Get a Carrot Account", GUILayout.Height(25)))
+        {
+            Application.OpenURL("https://gocarrot.com/developers/sign_up?referrer=unity");
+        }
+    }
 
-   void UpdateCarrotGameObject()
-   {
-      mCarrotGameObject = GameObject.Find("CarrotGameObject");
-      if(mCarrotGameObject)
-      {
-         Carrot carrot = mCarrotGameObject.GetComponent<Carrot>();
-         carrot.FacebookAppId = mCarrotAppId;
-         carrot.CarrotAppSecret = mCarrotAppSecret;
-      }
-   }
+    void UpdateCarrotGameObject()
+    {
+        mCarrotGameObject = GameObject.Find("CarrotGameObject");
+        if(mCarrotGameObject)
+        {
+            Carrot carrot = mCarrotGameObject.GetComponent<Carrot>();
+            carrot.FacebookAppId = mCarrotAppId;
+            carrot.CarrotAppSecret = mCarrotAppSecret;
+        }
+    }
 
-   void OnFocus()
-   {
-      LoadSettings();
-      UpdateCarrotGameObject();
-   }
+    void OnFocus()
+    {
+        LoadSettings();
+        UpdateCarrotGameObject();
+    }
 
-   void OnSelectionChange()
-   {
-      SaveSettings();
-      UpdateCarrotGameObject();
-   }
+    void OnSelectionChange()
+    {
+        SaveSettings();
+        UpdateCarrotGameObject();
+    }
 
-   void OnLostFocus()
-   {
-      SaveSettings();
-      UpdateCarrotGameObject();
-   }
+    void OnLostFocus()
+    {
+        SaveSettings();
+        UpdateCarrotGameObject();
+    }
 
-   static void LoadSettings()
-   {
-      mCarrotAppId = EditorPrefs.GetString(ProjectName + "-CarrotAppId");
-      mCarrotAppSecret = EditorPrefs.GetString(ProjectName + "-CarrotAppSecret");
-   }
+    static void LoadSettings()
+    {
+        mCarrotAppId = EditorPrefs.GetString(ProjectName + "-CarrotAppId");
+        mCarrotAppSecret = EditorPrefs.GetString(ProjectName + "-CarrotAppSecret");
+    }
 
-   static void SaveSettings()
-   {
-      EditorPrefs.SetString(ProjectName + "-CarrotAppId", mCarrotAppId);
-      EditorPrefs.SetString(ProjectName + "-CarrotAppSecret", mCarrotAppSecret);
-   }
+    static void SaveSettings()
+    {
+        EditorPrefs.SetString(ProjectName + "-CarrotAppId", mCarrotAppId);
+        EditorPrefs.SetString(ProjectName + "-CarrotAppSecret", mCarrotAppSecret);
+    }
 
-   static string ProjectName
-   {
-      get
-      {
-         string[] dp = Application.dataPath.Split('/');
-         return dp[dp.Length - 2];
-      }
-   }
+    static string ProjectName
+    {
+        get
+        {
+            string[] dp = Application.dataPath.Split('/');
+            return dp[dp.Length - 2];
+        }
+    }
 
-   static string mCarrotAppId = "";
-   static string mCarrotAppSecret = "";
-   GameObject mCarrotGameObject = null;
+    static string mCarrotAppId = "";
+    static string mCarrotAppSecret = "";
+    GameObject mCarrotGameObject = null;
 }
