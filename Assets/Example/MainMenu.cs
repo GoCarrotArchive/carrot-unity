@@ -11,6 +11,8 @@ public class MainMenu : MonoBehaviour
     string scoreString = "100";
     string achieveString = "achievement_id";
     string authStatus = "";
+    string actionString = "action_id";
+    string objectString = "object_id";
 
     void Start()
     {
@@ -52,6 +54,15 @@ public class MainMenu : MonoBehaviour
         if(GUILayout.Button("Like Game", GUILayout.Height(buttonHeight)))
         {
             Carrot.Instance.likeGame();
+        }
+
+        // Action Post
+        GUILayout.Space(buttonSpacing);
+        actionString = GUILayout.TextField(actionString, buttonWidth);
+        objectString = GUILayout.TextField(objectString, buttonWidth);
+        if(GUILayout.Button("Post Object/Action", GUILayout.Height(buttonHeight)))
+        {
+            Carrot.Instance.postAction(actionString, objectString);
         }
 
         GUILayout.EndArea();
