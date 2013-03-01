@@ -6,16 +6,14 @@ docs/
 *.apk
 .DS_Store
 
-!Library/*.asset
-!Library/AssetImportState
-!Library/AssetVersioning.db
-!Library/BuildPlayer.prefs
-!Library/ScriptMapper
-!Library/assetservercachev3
-!Library/expandedItems
-!Library/guidmapper
-!Library/unity default resources
-!Library/unity editor resources
+*.pidb
+*.pidb.meta
+*.userprefs
+*.userprefs.meta
+*.pdb
+*.pdb.meta
+*.mdb
+*.mdb.meta
 
 Carrot.unitypackage
 
@@ -23,4 +21,4 @@ iOSBuild/
 WebBuild/
 StandaloneBuild*/
 FlashBuild/
-Assets/AssetStoreTools/
+Assets/AssetStoreTools*
