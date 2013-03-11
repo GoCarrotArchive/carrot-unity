@@ -556,7 +556,7 @@ public class Carrot : MonoBehaviour
             }
         }
         string payload = String.Join("&", kvList.ToArray());
-        string signString = String.Format("{0}\n{1}\n{2}\n{3}", method, mHostname, endpoint, payload);
+        string signString = String.Format("{0}\n{1}\n{2}\n{3}", method, mHostname.Split(new char[]{':'})[0], endpoint, payload);
         string sig = AWSSDKUtils.HMACSign(signString, CarrotAppSecret, KeyedHashAlgorithm.Create("HMACSHA256"));
 
         UnityEngine.WWWForm formPayload = new UnityEngine.WWWForm();
