@@ -65,6 +65,30 @@ public class MainMenu : MonoBehaviour
             Carrot.Instance.postAction(actionString, objectString);
         }
 
+        // Dynamic Action Post
+        GUILayout.Space(buttonSpacing);
+        if(GUILayout.Button("Post Screenshot", GUILayout.Height(buttonHeight)))
+        {
+            StartCoroutine(postScreenshotCoroutine());
+        }
+
         GUILayout.EndArea();
+    }
+
+    IEnumerator postScreenshotCoroutine()
+    {
+        yield return new WaitForEndOfFrame();
+
+        Texture2D tex = new Texture2D(Screen.width, Screen.height, TextureFormat.RGB24, false );
+        tex.ReadPixels(new Rect(0, 0, Screen.width, Screen.height), 0, 0);
+        tex.Apply();
+
+        Dictionary<string, object> objectProperties = new Dictionary<string, object> {
+            {"title", "Dynamic Objects"},
+            {"description", "A Screenshot from Unity"},
+            {"image", tex}
+        };
+        Carrot.Instance.postAction("demo", null, "feature", objectProperties);
+        Destroy(tex);
     }
 }

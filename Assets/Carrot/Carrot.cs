@@ -335,9 +335,9 @@ public class Carrot : MonoBehaviour
         }
         else if(!objectProperties.Contains("title") ||
                 !objectProperties.Contains("description") ||
-                !objectProperties.Contains("image_url"))
+                !objectProperties.Contains("image"))
         {
-            throw new ArgumentException("objectProperties must contain keys for 'title', 'description', and 'image_url'.", "objectProperties");
+            throw new ArgumentException("objectProperties must contain keys for 'title', 'description', and 'image'.", "objectProperties");
         }
 
         objectProperties["object_type"] = objectId;
@@ -484,7 +484,7 @@ public class Carrot : MonoBehaviour
     }
 
     private IEnumerator signedRequestCoroutine(string method, string endpoint,
-                                               IDictionary<string, object> parameters,
+                                               Dictionary<string, object> parameters,
                                                CarrotRequestResponse callback = null)
     {
         Response ret = Response.UnknownError;
@@ -504,9 +504,33 @@ public class Carrot : MonoBehaviour
             {"request_id", System.Guid.NewGuid().ToString()}
         };
 
-        // Merge params
+        // If this has an attached image, bytes will be placed here.
+        byte[] imageBytes = null;
+
         if(parameters != null)
         {
+            // Check for image on dynamic objects
+            if(parameters.ContainsKey("object_properties"))
+            {
+                IDictionary objectProperties = parameters["object_properties"] as IDictionary;
+                object image = objectProperties["image"];
+                Texture2D imageTex2D;
+                if((imageTex2D = image as Texture2D) != null)
+                {
+                    imageBytes = imageTex2D.EncodeToPNG();
+                    using(SHA256 sha256 = SHA256Managed.Create())
+                    {
+                        objectProperties["image_sha"] = System.Text.Encoding.UTF8.GetString(sha256.ComputeHash(imageBytes));
+                    }
+                }
+                else if(image is string)
+                {
+                    objectProperties["image_url"] = image;
+                }
+                objectProperties.Remove("image");
+            }
+
+            // Merge params
             foreach(KeyValuePair<string, object> entry in parameters)
             {
                 urlParams[entry.Key] = entry.Value;
@@ -550,6 +574,12 @@ public class Carrot : MonoBehaviour
             }
         }
         formPayload.AddField("sig", sig);
+
+        // Attach image
+        if(imageBytes != null)
+        {
+            formPayload.AddBinaryData("image_bytes", imageBytes);
+        }
 
         UnityEngine.WWW request = new UnityEngine.WWW(String.Format("https://{0}{1}", mHostname, endpoint), formPayload);
         yield return request;
