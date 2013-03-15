@@ -651,7 +651,7 @@ public partial class Carrot : MonoBehaviour
         Dictionary<string, object> urlParams = new Dictionary<string, object> {
             {"api_key", mUserId},
             {"game_id", FacebookAppId},
-            {"request_date", (int)((DateTime.UtcNow - new DateTime(1970, 1, 1, 0, 0, 0, 0).ToLocalTime()).TotalSeconds)},
+            {"request_date", (int)((DateTime.Now.ToUniversalTime().Ticks - 621355968000000000) / 10000000)},
             {"request_id", System.Guid.NewGuid().ToString()}
         };
 
