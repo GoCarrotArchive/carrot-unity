@@ -83,12 +83,9 @@ public class MainMenu : MonoBehaviour
         tex.ReadPixels(new Rect(0, 0, Screen.width, Screen.height), 0, 0);
         tex.Apply();
 
-        Dictionary<string, object> objectProperties = new Dictionary<string, object> {
-            {"title", "Dynamic Objects"},
-            {"description", "A Screenshot from Unity"},
-            {"image", tex}
-        };
-        Carrot.Instance.postAction("demo", null, "feature", objectProperties);
+        Carrot.ViralObject newObject = new Carrot.ViralObject("feature", "Dynamic Objects",
+            "A screenshot uploaded from Unity.", tex);
+        Carrot.Instance.postAction("demo", null, newObject);
         Destroy(tex);
     }
 }
