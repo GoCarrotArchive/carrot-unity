@@ -34,7 +34,7 @@ using System.Security.Cryptography.X509Certificates;
 /// A MonoBehaviour which can be attached to a Unity GameObject to
 /// provide access to Carrot functionality.
 /// </summary>
-public class Carrot : MonoBehaviour
+public partial class Carrot : MonoBehaviour
 {
     /// <summary>
     /// The Facebook Application Id for your application.
@@ -293,59 +293,210 @@ public class Carrot : MonoBehaviour
     }
 
     /// <summary>
-    /// Sends an Open Graph action which will create a new object from the properties provided.
+    /// Describes a viral object which is to be created.
     /// </summary>
-    /// <param name="actionId">Carrot action id.</param>
-    /// <param name="objectId">Carrot object id.</param>
-    /// <param name="objectProperties">Parameters to be submitted with the action.</param>
-    /// <param name="objectInstanceId">Object instance id to create or re-use.</param>
-    /// <param name="callback">Optional <see cref="CarrotRequestResponse"/> which will be used to deliver the reply.</param>
-    public void postAction(string actionId, string objectId, IDictionary objectProperties,
-                           string objectInstanceId = null, CarrotRequestResponse callback = null)
+    public class ViralObject
     {
-        postAction(actionId, null, objectId, objectProperties, objectInstanceId, callback);
+        /// <summary>
+        /// The title of the viral object to be created.
+        /// </summary>
+        public string Title
+        {
+            get
+            {
+                return mObjectProperties["title"] as string;
+            }
+            set
+            {
+                mObjectProperties["title"] = value;
+            }
+        }
+
+        /// <summary>
+        /// The description of the viral object to be created.
+        /// </summary>
+        public string Description
+        {
+            get
+            {
+                return mObjectProperties["description"] as string;
+            }
+            set
+            {
+                mObjectProperties["description"] = value;
+            }
+        }
+
+        /// <summary>
+        /// The object instance id of the viral object to create or re-use.
+        /// If ObjectInstanceId is not specified, GUID will be generated instead.
+        /// </summary>
+        public string ObjectInstanceId
+        {
+            get
+            {
+                return mObjectProperties["object_instance_id"] as string;
+            }
+            set
+            {
+                mObjectProperties["object_instance_id"] = value;
+            }
+        }
+
+        /// <summary>
+        /// The URL of the image, or a Texture2D which will be uploaded and
+        /// used for the viral object.
+        /// </summary>
+        public object Image
+        {
+            get
+            {
+                return mObjectProperties["image"];
+            }
+            set
+            {
+                mObjectProperties["image"] = value;
+            }
+        }
+
+        /// <summary>
+        /// Assignment of user defined fields for the viral object to created.
+        /// </summary>
+        public Dictionary<string, object> Fields
+        {
+            get
+            {
+                return mObjectProperties["fields"] as Dictionary<string, object>;
+            }
+            set
+            {
+                mObjectProperties["fields"] = value;
+            }
+        }
+
+        /// <summary>
+        /// Specify the parameters for a viral object using a Texture2D to upload.
+        /// </summary>
+        /// <param name="objectId">Carrot object id.</param>
+        /// <param name="title">Title of the new viral object.</param>
+        /// <param name="description">Description for the new viral object.</param>
+        /// <param name="image">Texture2D to upload for the new viral object.</param>
+        /// <param name="objectInstanceId">Optional object instance id to create, or re-use.</params>
+        public ViralObject(string objectId, string title, string description,
+                           Texture2D image, string objectInstanceId = null)
+        {
+            if(string.IsNullOrEmpty(objectId))
+            {
+                throw new ArgumentNullException("objectId must not be null or empty string.", "objectId");
+            }
+
+            if(string.IsNullOrEmpty(title))
+            {
+                throw new ArgumentNullException("title must not be null or empty string.", "title");
+            }
+
+            if(string.IsNullOrEmpty(description))
+            {
+                throw new ArgumentNullException("description must not be null or empty string.", "description");
+            }
+
+            if(image == null)
+            {
+                throw new ArgumentNullException("image must not be null.", "image");
+            }
+
+            mObjectProperties = new Dictionary<string, object>();
+            mObjectProperties["object_type"] = objectId;
+            this.Title = title;
+            this.Description = description;
+            this.Image = image;
+            if(objectInstanceId != null) this.ObjectInstanceId = objectInstanceId;
+        }
+
+        /// <summary>
+        /// Specify the parameters for a viral object with a remote image URL.
+        /// </summary>
+        /// <param name="objectId">Carrot object id.</param>
+        /// <param name="title">Title of the new viral object.</param>
+        /// <param name="description">Description for the new viral object.</param>
+        /// <param name="imageUrl">Image URL for the new viral object.</param>
+        /// <param name="objectInstanceId">Optional object instance id to create, or re-use.</params>
+        public ViralObject(string objectId, string title, string description,
+                           string imageUrl, string objectInstanceId = null)
+        {
+            if(string.IsNullOrEmpty(objectId))
+            {
+                throw new ArgumentNullException("objectId must not be null or empty string.", "objectId");
+            }
+
+            if(string.IsNullOrEmpty(title))
+            {
+                throw new ArgumentNullException("title must not be null or empty string.", "title");
+            }
+
+            if(string.IsNullOrEmpty(description))
+            {
+                throw new ArgumentNullException("description must not be null or empty string.", "description");
+            }
+
+            if(string.IsNullOrEmpty(imageUrl))
+            {
+                throw new ArgumentNullException("imageUrl must not be null or empty string.", "imageUrl");
+            }
+
+            mObjectProperties = new Dictionary<string, object>();
+            mObjectProperties["object_type"] = objectId;
+            this.Title = title;
+            this.Description = description;
+            this.Image = imageUrl;
+            if(objectInstanceId != null) this.ObjectInstanceId = objectInstanceId;
+        }
+
+        public Dictionary<string, object> toDictionary()
+        {
+            return mObjectProperties;
+        }
+
+        private Dictionary<string, object> mObjectProperties;
     }
 
     /// <summary>
-    /// Sends an Open Graph action which will create a new object from the properties provided.
+    /// Sends an Open Graph action which will create a new object.
+    /// </summary>
+    /// <param name="actionId">Carrot action id.</param>
+    /// <param name="viralObject">A <see cref="ViralObject"/> describing the object to be created.</param>
+    /// <param name="callback">Optional <see cref="CarrotRequestResponse"/> which will be used to deliver the reply.</param>
+    public void postAction(string actionId, ViralObject viralObject,
+                           CarrotRequestResponse callback = null)
+    {
+        postAction(actionId, null, viralObject, callback);
+    }
+
+    /// <summary>
+    /// Sends an Open Graph action which will create a new object.
     /// </summary>
     /// <param name="actionId">Carrot action id.</param>
     /// <param name="actionProperties">Parameters to be submitted with the action.</param>
-    /// <param name="objectId">Carrot object id.</param>
-    /// <param name="objectProperties">Parameters to be submitted with the action.</param>
-    /// <param name="objectInstanceId">Object instance id to create or re-use.</param>
+    /// <param name="viralObject">A <see cref="ViralObject"/> describing the object to be created.</param>
     /// <param name="callback">Optional <see cref="CarrotRequestResponse"/> which will be used to deliver the reply.</param>
-    public void postAction(string actionId, IDictionary actionProperties, string objectId,
-                           IDictionary objectProperties, string objectInstanceId = null,
+    public void postAction(string actionId, IDictionary actionProperties,
+                           ViralObject viralObject,
                            CarrotRequestResponse callback = null)
     {
-        if(string.IsNullOrEmpty(objectId))
-        {
-            throw new ArgumentNullException("objectId must not be null or empty string.", "objectId");
-        }
-
         if(string.IsNullOrEmpty(actionId))
         {
             throw new ArgumentNullException("actionId must not be null or empty string.", "actionId");
         }
 
-        if(objectProperties == null)
+        if(viralObject == null)
         {
-            throw new ArgumentNullException("objectProperties must not be null.", "objectProperties");
-        }
-        else if(!objectProperties.Contains("title") ||
-                !objectProperties.Contains("description") ||
-                !objectProperties.Contains("image"))
-        {
-            throw new ArgumentException("objectProperties must contain keys for 'title', 'description', and 'image'.", "objectProperties");
+            throw new ArgumentNullException("viralObject must not be null.", "viralObject");
         }
 
-        objectProperties["object_type"] = objectId;
-        if(!string.IsNullOrEmpty(objectInstanceId)) objectProperties["object_instance_id"] = objectInstanceId;
         Dictionary<string, object> parameters = new Dictionary<string, object>() {
             {"action_id", actionId},
             {"action_properties", actionProperties == null ? new Dictionary<string, object>() : actionProperties},
-            {"object_properties", objectProperties}
+            {"object_properties", viralObject.toDictionary()}
         };
         StartCoroutine(signedRequestCoroutine("POST", "/me/actions.json", parameters, callback));
     }
