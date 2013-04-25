@@ -43,6 +43,15 @@ public class CarrotPostProcessScene
 
         if(carrot != null)
         {
+            if(string.IsNullOrEmpty(CarrotSettings.CarrotAppId))
+            {
+                Debug.LogWarning("Carrot App Id needs to be assigned in the Edit/Carrot menu.");
+            }
+            if(string.IsNullOrEmpty(CarrotSettings.CarrotAppSecret))
+            {
+                Debug.LogWarning("Carrot App Secret needs to be assigned in the Edit/Carrot menu.");
+            }
+
             if(CarrotPostProcessScene.WillCreatePrefab)
             {
                 carrot.FacebookAppId = CarrotSettings.CarrotAppId;
