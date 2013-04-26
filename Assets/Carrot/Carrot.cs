@@ -377,17 +377,17 @@ public partial class Carrot : MonoBehaviour
         /// <summary>
         /// Specify the parameters for a viral object using a Texture2D to upload.
         /// </summary>
-        /// <param name="objectId">Carrot object id.</param>
+        /// <param name="objectTypeId">Carrot object type id.</param>
         /// <param name="title">Title of the new viral object.</param>
         /// <param name="description">Description for the new viral object.</param>
         /// <param name="image">Texture2D to upload for the new viral object.</param>
         /// <param name="objectInstanceId">Optional object instance id to create, or re-use.</params>
-        public ViralObject(string objectId, string title, string description,
+        public ViralObject(string objectTypeId, string title, string description,
                            Texture2D image, string objectInstanceId = null)
         {
-            if(string.IsNullOrEmpty(objectId))
+            if(string.IsNullOrEmpty(objectTypeId))
             {
-                throw new ArgumentNullException("objectId must not be null or empty string.", "objectId");
+                throw new ArgumentNullException("objectTypeId must not be null or empty string.", "objectTypeId");
             }
 
             if(string.IsNullOrEmpty(title))
@@ -406,7 +406,7 @@ public partial class Carrot : MonoBehaviour
             }
 
             mObjectProperties = new Dictionary<string, object>();
-            mObjectProperties["object_type"] = objectId;
+            mObjectProperties["object_type"] = objectTypeId;
             this.Title = title;
             this.Description = description;
             this.Image = image;
@@ -416,17 +416,17 @@ public partial class Carrot : MonoBehaviour
         /// <summary>
         /// Specify the parameters for a viral object with a remote image URL.
         /// </summary>
-        /// <param name="objectId">Carrot object id.</param>
+        /// <param name="objectTypeId">Carrot object type id.</param>
         /// <param name="title">Title of the new viral object.</param>
         /// <param name="description">Description for the new viral object.</param>
         /// <param name="imageUrl">Image URL for the new viral object.</param>
         /// <param name="objectInstanceId">Optional object instance id to create, or re-use.</params>
-        public ViralObject(string objectId, string title, string description,
+        public ViralObject(string objectTypeId, string title, string description,
                            string imageUrl, string objectInstanceId = null)
         {
-            if(string.IsNullOrEmpty(objectId))
+            if(string.IsNullOrEmpty(objectTypeId))
             {
-                throw new ArgumentNullException("objectId must not be null or empty string.", "objectId");
+                throw new ArgumentNullException("objectTypeId must not be null or empty string.", "objectTypeId");
             }
 
             if(string.IsNullOrEmpty(title))
@@ -445,7 +445,7 @@ public partial class Carrot : MonoBehaviour
             }
 
             mObjectProperties = new Dictionary<string, object>();
-            mObjectProperties["object_type"] = objectId;
+            mObjectProperties["object_type"] = objectTypeId;
             this.Title = title;
             this.Description = description;
             this.Image = imageUrl;
