@@ -89,6 +89,6 @@ public partial class Carrot
             {"action_properties", actionProperties == null ? new Dictionary<string, object>() : actionProperties},
             {"object_properties", objectProperties}
         };
-        StartCoroutine(signedRequestCoroutine("POST", "/me/actions.json", parameters, callback));
+        StartCoroutine(cachedRequestCoroutine("/me/actions.json", parameters, callback));
     }
 }

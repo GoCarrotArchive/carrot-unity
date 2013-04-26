@@ -237,7 +237,7 @@ public partial class Carrot : MonoBehaviour
             throw new ArgumentNullException("achievementId must not be null or empty string.", "achievementId");
         }
 
-        StartCoroutine(signedRequestCoroutine("POST", "/me/achievements.json", new Dictionary<string, object>() {
+        StartCoroutine(cachedRequestCoroutine("/me/achievements.json", new Dictionary<string, object>() {
                 {"achievement_id", achievementId}
         }, callback));
     }
@@ -249,7 +249,7 @@ public partial class Carrot : MonoBehaviour
     /// <param name="callback">Optional <see cref="CarrotRequestResponse"/> which will be used to deliver the reply.</param>
     public void postHighScore(uint score, CarrotRequestResponse callback = null)
     {
-        StartCoroutine(signedRequestCoroutine("POST", "/me/scores.json", new Dictionary<string, object>() {
+        StartCoroutine(cachedRequestCoroutine("/me/scores.json", new Dictionary<string, object>() {
                 {"value", score}
         }, callback));
     }
@@ -292,7 +292,7 @@ public partial class Carrot : MonoBehaviour
         };
         if(objectInstanceId != null) parameters["object_instance_id"] = objectInstanceId;
 
-        StartCoroutine(signedRequestCoroutine("POST", "/me/actions.json", parameters, callback));
+        StartCoroutine(cachedRequestCoroutine("/me/actions.json", parameters, callback));
     }
 
     /// <summary>
@@ -501,7 +501,7 @@ public partial class Carrot : MonoBehaviour
             {"action_properties", actionProperties == null ? new Dictionary<string, object>() : actionProperties},
             {"object_properties", viralObject.toDictionary()}
         };
-        StartCoroutine(signedRequestCoroutine("POST", "/me/actions.json", parameters, callback));
+        StartCoroutine(cachedRequestCoroutine("/me/actions.json", parameters, callback));
     }
 
     /// <summary>
@@ -510,7 +510,7 @@ public partial class Carrot : MonoBehaviour
     /// <param name="callback">Optional <see cref="CarrotRequestResponse"/> which will be used to deliver the reply.</param>
     public void likeGame(CarrotRequestResponse callback = null)
     {
-        StartCoroutine(signedRequestCoroutine("POST", "/me/like.json", new Dictionary<string, object>() {
+        StartCoroutine(cachedRequestCoroutine("/me/like.json", new Dictionary<string, object>() {
             {"object", "game"}
         }, callback));
     }
@@ -521,7 +521,7 @@ public partial class Carrot : MonoBehaviour
     /// <param name="callback">Optional <see cref="CarrotRequestResponse"/> which will be used to deliver the reply.</param>
     public void likePublisher(CarrotRequestResponse callback = null)
     {
-        StartCoroutine(signedRequestCoroutine("POST", "/me/like.json", new Dictionary<string, object>() {
+        StartCoroutine(cachedRequestCoroutine("/me/like.json", new Dictionary<string, object>() {
             {"object", "publisher"}
         }, callback));
     }
@@ -538,7 +538,7 @@ public partial class Carrot : MonoBehaviour
             throw new ArgumentNullException("achievementId must not be null or empty string.", "achievementId");
         }
 
-        StartCoroutine(signedRequestCoroutine("POST", "/me/like.json", new Dictionary<string, object>() {
+        StartCoroutine(cachedRequestCoroutine("/me/like.json", new Dictionary<string, object>() {
             {"object", "achievement:" + achievementId}
         }, callback));
     }
@@ -555,21 +555,30 @@ public partial class Carrot : MonoBehaviour
             throw new ArgumentNullException("objectId must not be null or empty string.", "objectId");
         }
 
-        StartCoroutine(signedRequestCoroutine("POST", "/me/like.json", new Dictionary<string, object>() {
+        StartCoroutine(cachedRequestCoroutine("/me/like.json", new Dictionary<string, object>() {
             {"object", "object:" + objectId}
         }, callback));
     }
+
+    #region Constructor
+    /// @cond hide_from_doxygen
+    Carrot()
+    {
+        mCarrotCache = new CarrotCache();
+    }
+    /// @endcond
+    #endregion
 
     #region MonoBehaviour
     /// @cond hide_from_doxygen
     void Start()
     {
-        mInstance = this;
         DontDestroyOnLoad(this);
     }
 
     void OnApplicationQuit()
     {
+        mCarrotCache.Dispose();
         Destroy(this);
     }
     /// @endcond
@@ -637,8 +646,29 @@ public partial class Carrot : MonoBehaviour
         yield return ret;
     }
 
-    private IEnumerator signedRequestCoroutine(string method, string endpoint,
+    private IEnumerator cachedRequestCoroutine(string endpoint,
                                                Dictionary<string, object> parameters,
+                                               CarrotRequestResponse callback = null)
+    {
+        CarrotCache.CachedRequest cachedRequest = mCarrotCache.CacheRequest(endpoint, parameters);
+        yield return StartCoroutine(signedRequestCoroutine(cachedRequest, (Response ret, string errorText) => {
+            switch(ret)
+            {
+                case Response.OK:
+                case Response.NotFound:
+                case Response.ParameterError:
+                    cachedRequest.RemoveFromCache();
+                    break;
+
+                default:
+                    cachedRequest.AddRetryInCache();
+                    break;
+            }
+            if(callback != null) callback(ret, errorText);
+        }));
+    }
+
+    private IEnumerator signedRequestCoroutine(CarrotCache.CachedRequest cachedRequest,
                                                CarrotRequestResponse callback = null)
     {
         Response ret = Response.UnknownError;
@@ -654,9 +684,10 @@ public partial class Carrot : MonoBehaviour
         Dictionary<string, object> urlParams = new Dictionary<string, object> {
             {"api_key", mUserId},
             {"game_id", mFacebookAppId},
-            {"request_date", (int)((DateTime.Now.ToUniversalTime().Ticks - 621355968000000000) / 10000000)},
-            {"request_id", System.Guid.NewGuid().ToString()}
+            {"request_date", cachedRequest.RequestDate},
+            {"request_id", cachedRequest.RequestId}
         };
+        Dictionary<string, object> parameters = cachedRequest.Parameters;
 
         // If this has an attached image, bytes will be placed here.
         byte[] imageBytes = null;
@@ -710,7 +741,7 @@ public partial class Carrot : MonoBehaviour
             }
         }
         string payload = String.Join("&", kvList.ToArray());
-        string signString = String.Format("{0}\n{1}\n{2}\n{3}", method, mHostname.Split(new char[]{':'})[0], endpoint, payload);
+        string signString = String.Format("{0}\n{1}\n{2}\n{3}", "POST", mHostname.Split(new char[]{':'})[0], cachedRequest.Endpoint, payload);
         string sig = AWSSDKUtils.HMACSign(signString, mCarrotAppSecret, KeyedHashAlgorithm.Create("HMACSHA256"));
 
         UnityEngine.WWWForm formPayload = new UnityEngine.WWWForm();
@@ -735,7 +766,7 @@ public partial class Carrot : MonoBehaviour
             formPayload.AddBinaryData("image_bytes", imageBytes);
         }
 
-        UnityEngine.WWW request = new UnityEngine.WWW(String.Format("https://{0}{1}", mHostname, endpoint), formPayload);
+        UnityEngine.WWW request = new UnityEngine.WWW(String.Format("https://{0}{1}", mHostname, cachedRequest.Endpoint), formPayload);
         yield return request;
 
         int statusCode = 0;
@@ -819,5 +850,6 @@ public partial class Carrot : MonoBehaviour
     private string mHostname = "gocarrot.com";
     private string mFacebookAppId;
     private string mCarrotAppSecret;
+    private CarrotCache mCarrotCache;
     #endregion
 }
