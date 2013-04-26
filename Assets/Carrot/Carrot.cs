@@ -37,16 +37,6 @@ using System.Security.Cryptography.X509Certificates;
 public partial class Carrot : MonoBehaviour
 {
     /// <summary>
-    /// The Facebook Application Id for your application.
-    /// </summary>
-    public string FacebookAppId;
-
-    /// <summary>
-    /// The Carrot Application Secret for your application.
-    /// </summary>
-    public string CarrotAppSecret;
-
-    /// <summary>
     /// Gets the <see cref="Carrot"/> singleton.
     /// </summary>
     /// <value> The <see cref="Carrot"/> singleton.</value>
@@ -61,13 +51,26 @@ public partial class Carrot : MonoBehaviour
                 if(mInstance == null)
                 {
                     GameObject carrotGameObject = GameObject.Find("CarrotGameObject");
-                    if(carrotGameObject != null)
+                    if(carrotGameObject == null)
                     {
-                        mInstance = carrotGameObject.GetComponent<Carrot>();
+                        carrotGameObject = new GameObject("CarrotGameObject");
+                        carrotGameObject.AddComponent("Carrot");
+                    }
+                    mInstance = carrotGameObject.GetComponent<Carrot>();
+
+                    TextAsset carrotJson = Resources.Load("carrot") as TextAsset;
+                    if(carrotJson == null)
+                    {
+                        throw new NullReferenceException("Carrot text asset not found. Use the configuration tool in the 'Edit/Carrot' menu to generate it.");
+                    }
+                    else
+                    {
+                        Dictionary<string, object> carrotConfig = null;
+                        carrotConfig = Json.Deserialize(carrotJson.text) as Dictionary<string, object>;
+                        mInstance.mFacebookAppId = carrotConfig["carrotAppId"] as string;
+                        mInstance.mCarrotAppSecret = carrotConfig["carrotAppSecret"] as string;
                     }
                 }
-
-                if(mInstance == null) throw new NullReferenceException("No Carrot instance found in current scene!");
             }
             return mInstance;
         }
@@ -588,7 +591,7 @@ public partial class Carrot : MonoBehaviour
         payload.AddField("access_token", accessTokenOrFacebookId);
         payload.AddField("api_key", mUserId);
 
-        UnityEngine.WWW request = new UnityEngine.WWW(String.Format("https://{0}/games/{1}/users.json", mHostname, FacebookAppId), payload);
+        UnityEngine.WWW request = new UnityEngine.WWW(String.Format("https://{0}/games/{1}/users.json", mHostname, mFacebookAppId), payload);
         yield return request;
 
         int statusCode = 0;
@@ -650,7 +653,7 @@ public partial class Carrot : MonoBehaviour
 
         Dictionary<string, object> urlParams = new Dictionary<string, object> {
             {"api_key", mUserId},
-            {"game_id", FacebookAppId},
+            {"game_id", mFacebookAppId},
             {"request_date", (int)((DateTime.Now.ToUniversalTime().Ticks - 621355968000000000) / 10000000)},
             {"request_id", System.Guid.NewGuid().ToString()}
         };
@@ -708,7 +711,7 @@ public partial class Carrot : MonoBehaviour
         }
         string payload = String.Join("&", kvList.ToArray());
         string signString = String.Format("{0}\n{1}\n{2}\n{3}", method, mHostname.Split(new char[]{':'})[0], endpoint, payload);
-        string sig = AWSSDKUtils.HMACSign(signString, CarrotAppSecret, KeyedHashAlgorithm.Create("HMACSHA256"));
+        string sig = AWSSDKUtils.HMACSign(signString, mCarrotAppSecret, KeyedHashAlgorithm.Create("HMACSHA256"));
 
         UnityEngine.WWWForm formPayload = new UnityEngine.WWWForm();
         foreach(string key in keys)
@@ -814,5 +817,7 @@ public partial class Carrot : MonoBehaviour
     private AuthStatus mAuthStatus;
     private string mUserId;
     private string mHostname = "gocarrot.com";
+    private string mFacebookAppId;
+    private string mCarrotAppSecret;
     #endregion
 }

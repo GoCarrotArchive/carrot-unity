@@ -13,9 +13,11 @@
  * limitations under the License.
  */
 
+using MiniJSON;
 using System.IO;
 using UnityEngine;
 using UnityEditor;
+using System.Collections.Generic;
 
 public class CarrotSettings : EditorWindow
 {
@@ -28,9 +30,12 @@ public class CarrotSettings : EditorWindow
         }
         private set
         {
-            mCarrotAppId = value.Trim();
-            SaveSettings();
-            if(mInstance) mInstance.UpdateCarrotGameObject();
+            string appId = value.Trim();
+            if(appId != mCarrotAppId)
+            {
+                mCarrotAppId = appId;
+                SaveSettings();
+            }
         }
     }
 
@@ -43,9 +48,12 @@ public class CarrotSettings : EditorWindow
         }
         private set
         {
-            mCarrotAppSecret = value.Trim();
-            SaveSettings();
-            if(mInstance) mInstance.UpdateCarrotGameObject();
+            string appSecret = value.Trim();
+            if(appSecret != mCarrotAppSecret)
+            {
+                mCarrotAppSecret = appSecret;
+                SaveSettings();
+            }
         }
     }
 
@@ -54,8 +62,6 @@ public class CarrotSettings : EditorWindow
     {
         LoadSettings();
         CarrotSettings settingsWindow = (CarrotSettings)GetWindow<CarrotSettings>(false, "Carrot Settings", false);
-        mInstance = settingsWindow;
-        settingsWindow.UpdateCarrotGameObject();
         settingsWindow.Show();
     }
 
@@ -65,61 +71,40 @@ public class CarrotSettings : EditorWindow
         CarrotAppId = EditorGUILayout.TextField("Carrot App Id", mCarrotAppId);
         CarrotAppSecret = EditorGUILayout.TextField("Carrot App Secret", mCarrotAppSecret);
 
-        if(!CarrotPostProcessScene.WillCreatePrefab)
-        {
-            if(GUILayout.Button("Create Carrot GameObject", GUILayout.Height(25)))
-            {
-                UpdateCarrotGameObject();
-            }
-        }
-
         if(GUILayout.Button("Get a Carrot Account", GUILayout.Height(25)))
         {
             Application.OpenURL("https://gocarrot.com/developers/sign_up?referrer=unity");
         }
     }
 
-    void UpdateCarrotGameObject()
-    {
-        mCarrotGameObject = GameObject.Find("CarrotGameObject");
-
-        if(mCarrotGameObject == null && !CarrotPostProcessScene.WillCreatePrefab)
-        {
-            Object prefab = AssetDatabase.LoadAssetAtPath("Assets/Carrot/CarrotGameObject.prefab", typeof(GameObject));
-            mCarrotGameObject =  PrefabUtility.InstantiatePrefab(prefab as GameObject) as GameObject;
-        }
-
-        if(mCarrotGameObject)
-        {
-            Carrot carrot = mCarrotGameObject.GetComponent<Carrot>();
-            carrot.FacebookAppId = mCarrotAppId;
-            carrot.CarrotAppSecret = mCarrotAppSecret;
-        }
-    }
-
     static void LoadSettings()
     {
-        mCarrotAppId = EditorPrefs.GetString(ProjectName + "-CarrotAppId");
-        mCarrotAppSecret = EditorPrefs.GetString(ProjectName + "-CarrotAppSecret");
+        if(!mSettingsLoaded)
+        {
+            TextAsset carrotJson = Resources.Load("carrot") as TextAsset;
+            if(carrotJson != null)
+            {
+                Dictionary<string, object> carrotConfig = null;
+                carrotConfig = Json.Deserialize(carrotJson.text) as Dictionary<string, object>;
+                mCarrotAppId = carrotConfig["carrotAppId"] as string;
+                mCarrotAppSecret = carrotConfig["carrotAppSecret"] as string;
+            }
+            mSettingsLoaded = true;
+        }
     }
 
     static void SaveSettings()
     {
-        if(!string.IsNullOrEmpty(mCarrotAppId)) EditorPrefs.SetString(ProjectName + "-CarrotAppId", mCarrotAppId.Trim());
-        if(!string.IsNullOrEmpty(mCarrotAppSecret))EditorPrefs.SetString(ProjectName + "-CarrotAppSecret", mCarrotAppSecret.Trim());
-    }
+        Dictionary<string, object> carrotConfig = new Dictionary<string, object>();
+        carrotConfig["carrotAppId"] = mCarrotAppId;
+        carrotConfig["carrotAppSecret"] = mCarrotAppSecret;
 
-    static string ProjectName
-    {
-        get
-        {
-            string[] dp = Application.dataPath.Split('/');
-            return dp[dp.Length - 2];
-        }
+        System.IO.Directory.CreateDirectory(Application.dataPath + "/Resources");
+        File.WriteAllText(Application.dataPath + "/Resources/carrot.bytes", Json.Serialize(carrotConfig));
+        AssetDatabase.Refresh();
     }
 
     static string mCarrotAppId = "";
     static string mCarrotAppSecret = "";
-    static CarrotSettings mInstance;
-    GameObject mCarrotGameObject = null;
+    static bool mSettingsLoaded = false;
 }
