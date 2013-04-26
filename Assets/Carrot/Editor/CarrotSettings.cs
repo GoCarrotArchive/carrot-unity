@@ -28,7 +28,7 @@ public class CarrotSettings : EditorWindow
         }
         private set
         {
-            mCarrotAppId = value;
+            mCarrotAppId = value.Trim();
             SaveSettings();
             if(mInstance) mInstance.UpdateCarrotGameObject();
         }
@@ -43,7 +43,7 @@ public class CarrotSettings : EditorWindow
         }
         private set
         {
-            mCarrotAppSecret = value;
+            mCarrotAppSecret = value.Trim();
             SaveSettings();
             if(mInstance) mInstance.UpdateCarrotGameObject();
         }
@@ -105,8 +105,8 @@ public class CarrotSettings : EditorWindow
 
     static void SaveSettings()
     {
-        if(!string.IsNullOrEmpty(mCarrotAppId)) EditorPrefs.SetString(ProjectName + "-CarrotAppId", mCarrotAppId);
-        if(!string.IsNullOrEmpty(mCarrotAppSecret))EditorPrefs.SetString(ProjectName + "-CarrotAppSecret", mCarrotAppSecret);
+        if(!string.IsNullOrEmpty(mCarrotAppId)) EditorPrefs.SetString(ProjectName + "-CarrotAppId", mCarrotAppId.Trim());
+        if(!string.IsNullOrEmpty(mCarrotAppSecret))EditorPrefs.SetString(ProjectName + "-CarrotAppSecret", mCarrotAppSecret.Trim());
     }
 
     static string ProjectName
