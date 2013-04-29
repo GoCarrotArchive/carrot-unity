@@ -97,9 +97,40 @@ public class CarrotCache : IDisposable
         return ret;
     }
 
+    public List<CachedRequest> RequestsInCache()
+    {
+        List<CachedRequest> cachedRequests = new List<CachedRequest>();
+#if CACHE_ENABLED
+        IntPtr sqlStatement = IntPtr.Zero;
+        lock(this)
+        {
+            if(sqlite3_prepare_v2(mDBPtr, kCacheReadSQL, -1, out sqlStatement, IntPtr.Zero) == SQLITE_OK)
+            {
+                while(sqlite3_step(sqlStatement) == SQLITE_ROW)
+                {
+                    CachedRequest request = new CachedRequest();
+                    request.CacheId = sqlite3_column_int64(sqlStatement, 0);
+                    request.Endpoint = sqlite3_column_text(sqlStatement, 1);
+                    request.Parameters = Json.Deserialize(sqlite3_column_text(sqlStatement, 2)) as Dictionary<string, object>;
+                    request.RequestId = sqlite3_column_text(sqlStatement, 3);
+                    request.RequestDate = (int)sqlite3_column_double(sqlStatement, 4);
+                    request.Retries = sqlite3_column_int(sqlStatement, 5);
+                    request.Cache = this;
+                    cachedRequests.Add(request);
+                }
+            }
+            else
+            {
+                Debug.Log("Failed to load requests from Carrot cache. Error: " + sqlite3_errmsg(mDBPtr));
+            }
+        }
+        sqlite3_finalize(sqlStatement);
+#endif
+        return cachedRequests;
+    }
+
     public class CachedRequest
     {
-
         public Dictionary<string, object> Parameters
         {
             get;
@@ -144,25 +175,30 @@ public class CarrotCache : IDisposable
 
         internal CachedRequest() {}
 
+        public override string ToString()
+        {
+            return string.Format("[{0}] {1} - {2}: {3}", this.CacheId, this.RequestId, this.Endpoint, this.Parameters);
+        }
+
         public bool RemoveFromCache()
         {
             bool ret = true;
 #if CACHE_ENABLED
             IntPtr sqlStatement = IntPtr.Zero;
-            string sql = string.Format(kCacheDeleteSQL, CacheId);
-            lock(this)
+            string sql = string.Format(kCacheDeleteSQL, this.CacheId);
+            lock(this.Cache)
             {
-                if(sqlite3_prepare_v2(Cache.mDBPtr, sql, -1, out sqlStatement, IntPtr.Zero) == SQLITE_OK)
+                if(sqlite3_prepare_v2(this.Cache.mDBPtr, sql, -1, out sqlStatement, IntPtr.Zero) == SQLITE_OK)
                 {
                     if(sqlite3_step(sqlStatement) != SQLITE_DONE)
                     {
-                        Debug.Log("Failed to remove request from Carrot cache. Error: " + sqlite3_errmsg(Cache.mDBPtr));
+                        Debug.Log("Failed to remove request from Carrot cache. Error: " + sqlite3_errmsg(this.Cache.mDBPtr));
                         ret = false;
                     }
                 }
                 else
                 {
-                    Debug.Log("Failed to remove request from Carrot cache. Error: " + sqlite3_errmsg(Cache.mDBPtr));
+                    Debug.Log("Failed to remove request from Carrot cache. Error: " + sqlite3_errmsg(this.Cache.mDBPtr));
                     ret = false;
                 }
             }
@@ -176,20 +212,20 @@ public class CarrotCache : IDisposable
             bool ret = true;
 #if CACHE_ENABLED
             IntPtr sqlStatement = IntPtr.Zero;
-            string sql = string.Format(kCacheUpdateSQL, Retries + 1, CacheId);
-            lock(this)
+            string sql = string.Format(kCacheUpdateSQL, this.Retries + 1, this.CacheId);
+            lock(Cache)
             {
-                if(sqlite3_prepare_v2(Cache.mDBPtr, sql, -1, out sqlStatement, IntPtr.Zero) == SQLITE_OK)
+                if(sqlite3_prepare_v2(this.Cache.mDBPtr, sql, -1, out sqlStatement, IntPtr.Zero) == SQLITE_OK)
                 {
                     if(sqlite3_step(sqlStatement) != SQLITE_DONE)
                     {
-                        Debug.Log("Failed to add retry to request in Carrot cache. Error: " + sqlite3_errmsg(Cache.mDBPtr));
+                        Debug.Log("Failed to add retry to request in Carrot cache. Error: " + sqlite3_errmsg(this.Cache.mDBPtr));
                         ret = false;
                     }
                 }
                 else
                 {
-                    Debug.Log("Failed to add retry to request in Carrot cache. Error: " + sqlite3_errmsg(Cache.mDBPtr));
+                    Debug.Log("Failed to add retry to request in Carrot cache. Error: " + sqlite3_errmsg(this.Cache.mDBPtr));
                     ret = false;
                 }
             }
@@ -269,6 +305,18 @@ public class CarrotCache : IDisposable
 
     [DllImport(DLL_IMPORT_TARGET)]
     private static extern long sqlite3_last_insert_rowid(IntPtr db);
+
+    [DllImport(DLL_IMPORT_TARGET)]
+    private static extern long sqlite3_column_int64(IntPtr stmHandle, int iCol);
+
+    [DllImport(DLL_IMPORT_TARGET)]
+    private static extern string sqlite3_column_text(IntPtr stmHandle, int iCol);
+
+    [DllImport(DLL_IMPORT_TARGET)]
+    private static extern double sqlite3_column_double(IntPtr stmHandle, int iCol);
+
+    [DllImport(DLL_IMPORT_TARGET)]
+    private static extern int sqlite3_column_int(IntPtr stmHandle, int iCol);
 
     internal IntPtr mDBPtr;
 #endif // CACHE_ENABLED

@@ -189,6 +189,29 @@ public partial class Carrot : MonoBehaviour
             {
                 mAuthStatus = value;
                 AuthenticationStatusChanged(this, mAuthStatus);
+
+                if(mAuthStatus == AuthStatus.Ready)
+                {
+                    foreach(CarrotCache.CachedRequest request in mCarrotCache.RequestsInCache())
+                    {
+                        StartCoroutine(signedRequestCoroutine(request, (Response ret, string errorText) => {
+                            Debug.Log(request);
+                            Debug.Log(ret);
+                            switch(ret)
+                            {
+                                case Response.OK:
+                                case Response.NotFound:
+                                case Response.ParameterError:
+                                    request.RemoveFromCache();
+                                    break;
+
+                                default:
+                                    request.AddRetryInCache();
+                                    break;
+                            }
+                        }));
+                    }
+                }
             }
         }
     }
@@ -651,21 +674,29 @@ public partial class Carrot : MonoBehaviour
                                                CarrotRequestResponse callback = null)
     {
         CarrotCache.CachedRequest cachedRequest = mCarrotCache.CacheRequest(endpoint, parameters);
-        yield return StartCoroutine(signedRequestCoroutine(cachedRequest, (Response ret, string errorText) => {
-            switch(ret)
-            {
-                case Response.OK:
-                case Response.NotFound:
-                case Response.ParameterError:
-                    cachedRequest.RemoveFromCache();
-                    break;
+        if(mAuthStatus == AuthStatus.Ready)
+        {
+            yield return StartCoroutine(signedRequestCoroutine(cachedRequest, (Response ret, string errorText) => {
+                switch(ret)
+                {
+                    case Response.OK:
+                    case Response.NotFound:
+                    case Response.ParameterError:
+                        cachedRequest.RemoveFromCache();
+                        break;
 
-                default:
-                    cachedRequest.AddRetryInCache();
-                    break;
-            }
-            if(callback != null) callback(ret, errorText);
-        }));
+                    default:
+                        cachedRequest.AddRetryInCache();
+                        break;
+                }
+                if(callback != null) callback(ret, errorText);
+            }));
+        }
+        else
+        {
+            if(callback != null) callback(Response.UnknownError, authStatusString(mAuthStatus));
+            yield return null;
+        }
     }
 
     private IEnumerator signedRequestCoroutine(CarrotCache.CachedRequest cachedRequest,
