@@ -194,22 +194,7 @@ public partial class Carrot : MonoBehaviour
                 {
                     foreach(CarrotCache.CachedRequest request in mCarrotCache.RequestsInCache())
                     {
-                        StartCoroutine(signedRequestCoroutine(request, (Response ret, string errorText) => {
-                            Debug.Log(request);
-                            Debug.Log(ret);
-                            switch(ret)
-                            {
-                                case Response.OK:
-                                case Response.NotFound:
-                                case Response.ParameterError:
-                                    request.RemoveFromCache();
-                                    break;
-
-                                default:
-                                    request.AddRetryInCache();
-                                    break;
-                            }
-                        }));
+                        StartCoroutine(signedRequestCoroutine(request, cachedRequestHandler(request, null)));
                     }
                 }
             }
@@ -583,11 +568,31 @@ public partial class Carrot : MonoBehaviour
         }, callback));
     }
 
-    #region Constructor
+    #region Internal
     /// @cond hide_from_doxygen
     Carrot()
     {
         mCarrotCache = new CarrotCache();
+    }
+
+    private CarrotRequestResponse cachedRequestHandler(CarrotCache.CachedRequest cachedRequest,
+                                                       CarrotRequestResponse callback)
+    {
+        return (Response ret, string errorText) => {
+                switch(ret)
+                {
+                    case Response.OK:
+                    case Response.NotFound:
+                    case Response.ParameterError:
+                        cachedRequest.RemoveFromCache();
+                        break;
+
+                    default:
+                        cachedRequest.AddRetryInCache();
+                        break;
+                }
+                if(callback != null) callback(ret, errorText);
+        };
     }
     /// @endcond
     #endregion
@@ -676,21 +681,7 @@ public partial class Carrot : MonoBehaviour
         CarrotCache.CachedRequest cachedRequest = mCarrotCache.CacheRequest(endpoint, parameters);
         if(mAuthStatus == AuthStatus.Ready)
         {
-            yield return StartCoroutine(signedRequestCoroutine(cachedRequest, (Response ret, string errorText) => {
-                switch(ret)
-                {
-                    case Response.OK:
-                    case Response.NotFound:
-                    case Response.ParameterError:
-                        cachedRequest.RemoveFromCache();
-                        break;
-
-                    default:
-                        cachedRequest.AddRetryInCache();
-                        break;
-                }
-                if(callback != null) callback(ret, errorText);
-            }));
+            yield return StartCoroutine(signedRequestCoroutine(cachedRequest, cachedRequestHandler(cachedRequest, callback)));
         }
         else
         {
