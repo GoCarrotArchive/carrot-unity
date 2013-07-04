@@ -648,7 +648,29 @@ public partial class Carrot : MonoBehaviour
         DontDestroyOnLoad(this);
         StartCoroutine(servicesDiscoveryCoroutine());
         StartCoroutine(sendInstallMetricIfNeeded());
+
+#if UNITY_IPHONE || UNITY_ANDROID
+        mSessionStartTime = (DateTime.Now.ToUniversalTime().Ticks - 621355968000000000) / 10000000;
+#endif
     }
+
+#if UNITY_IPHONE || UNITY_ANDROID
+    void OnApplicationPause(bool isPaused)
+    {
+        if(isPaused)
+        {
+            long sessionEndTime = (DateTime.Now.ToUniversalTime().Ticks - 621355968000000000) / 10000000;
+            StartCoroutine(cachedRequestCoroutine(ServiceType.Metrics, "/session.json", new Dictionary<string, object>() {
+                    {"start_time", mSessionStartTime}
+                    {"end_time", sessionEndTime}
+            }, null);
+        }
+        else
+        {
+            mSessionStartTime = (DateTime.Now.ToUniversalTime().Ticks - 621355968000000000) / 10000000;
+        }
+    }
+#endif
 
     void OnApplicationQuit()
     {
@@ -1007,5 +1029,6 @@ public partial class Carrot : MonoBehaviour
     private string mBundleVersion;
     private string mAccessTokenOrFacebookId;
     private CarrotCache mCarrotCache;
+    private long mSessionStartTime;
     #endregion
 }
