@@ -71,7 +71,7 @@ public class CarrotCache : IDisposable
 
 #if CACHE_ENABLED
         IntPtr sqlStatement = IntPtr.Zero;
-        string sql = string.Format(kCacheInsertSQL, ret.Endpoint, Json.Serialize(ret.Parameters),
+        string sql = string.Format(kCacheInsertSQL, ret.ServiceType, ret.Endpoint, Json.Serialize(ret.Parameters),
                                    ret.RequestId, ret.RequestDate, ret.Retries);
         lock(this)
         {
@@ -97,24 +97,26 @@ public class CarrotCache : IDisposable
         return ret;
     }
 
-    public List<CachedRequest> RequestsInCache()
+    public List<CachedRequest> RequestsInCache(int authStatus)
     {
         List<CachedRequest> cachedRequests = new List<CachedRequest>();
 #if CACHE_ENABLED
         IntPtr sqlStatement = IntPtr.Zero;
         lock(this)
         {
+            string sql = string.Format(kCacheReadSQL, authStatus);
             if(sqlite3_prepare_v2(mDBPtr, kCacheReadSQL, -1, out sqlStatement, IntPtr.Zero) == SQLITE_OK)
             {
                 while(sqlite3_step(sqlStatement) == SQLITE_ROW)
                 {
                     CachedRequest request = new CachedRequest();
                     request.CacheId = sqlite3_column_int64(sqlStatement, 0);
-                    request.Endpoint = sqlite3_column_text(sqlStatement, 1);
-                    request.Parameters = Json.Deserialize(sqlite3_column_text(sqlStatement, 2)) as Dictionary<string, object>;
-                    request.RequestId = sqlite3_column_text(sqlStatement, 3);
-                    request.RequestDate = (int)sqlite3_column_double(sqlStatement, 4);
-                    request.Retries = sqlite3_column_int(sqlStatement, 5);
+                    request.ServiceType = sqlite3_column_int(sqlStatement, 1);
+                    request.Endpoint = sqlite3_column_text(sqlStatement, 2);
+                    request.Parameters = Json.Deserialize(sqlite3_column_text(sqlStatement, 3)) as Dictionary<string, object>;
+                    request.RequestId = sqlite3_column_text(sqlStatement, 4);
+                    request.RequestDate = (int)sqlite3_column_double(sqlStatement, 5);
+                    request.Retries = sqlite3_column_int(sqlStatement, 6);
                     request.Cache = this;
                     cachedRequests.Add(request);
                 }
@@ -132,6 +134,12 @@ public class CarrotCache : IDisposable
     public class CachedRequest
     {
         public Dictionary<string, object> Parameters
+        {
+            get;
+            internal set;
+        }
+
+        public int ServiceType
         {
             get;
             internal set;
@@ -177,7 +185,7 @@ public class CarrotCache : IDisposable
 
         public override string ToString()
         {
-            return string.Format("[{0}] {1} - {2}: {3}", this.CacheId, this.RequestId, this.Endpoint, this.Parameters);
+            return string.Format("[{0}] {1} {2} - {3}: {4}", this.CacheId, this.ServiceType, this.RequestId, this.Endpoint, this.Parameters);
         }
 
         public bool RemoveFromCache()
@@ -272,9 +280,9 @@ public class CarrotCache : IDisposable
     private const int SQLITE_ROW = 100;
     private const int SQLITE_DONE = 101;
 
-    private const string kCacheCreateSQL = "CREATE TABLE IF NOT EXISTS cache(request_endpoint TEXT, request_payload TEXT, request_id TEXT, request_date REAL, retry_count INTEGER)";
-    private const string kCacheReadSQL = "SELECT rowid, request_endpoint, request_payload, request_id, request_date, retry_count FROM cache ORDER BY retry_count";
-    private const string kCacheInsertSQL = "INSERT INTO cache (request_endpoint, request_payload, request_id, request_date, retry_count) VALUES ('{0}', '{1}', '{2}', '{3}', '{4}')";
+    private const string kCacheCreateSQL = "CREATE TABLE IF NOT EXISTS cache(request_servicetype INTEGER, request_endpoint TEXT, request_payload TEXT, request_id TEXT, request_date REAL, retry_count INTEGER)";
+    private const string kCacheReadSQL = "SELECT rowid, request_servicetype, request_endpoint, request_payload, request_id, request_date, retry_count FROM cache WHERE request_servicetype<={0} ORDER BY retry_count";
+    private const string kCacheInsertSQL = "INSERT INTO cache (request_servicetype, request_endpoint, request_payload, request_id, request_date, retry_count) VALUES ('{0}', '{1}', '{2}', '{3}', '{4}', '{5}')";
     private const string kCacheUpdateSQL = "UPDATE cache SET retry_count='{0}' WHERE rowid='{1}'";
     private const string kCacheDeleteSQL = "DELETE FROM cache WHERE rowid='{0}'";
 

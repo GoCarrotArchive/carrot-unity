@@ -193,12 +193,9 @@ public partial class Carrot : MonoBehaviour
                     AuthenticationStatusChanged(this, mAuthStatus);
                 }
 
-                if(mAuthStatus == AuthStatus.Ready)
+                foreach(CarrotCache.CachedRequest request in mCarrotCache.RequestsInCache(mAuthStatus))
                 {
-                    foreach(CarrotCache.CachedRequest request in mCarrotCache.RequestsInCache())
-                    {
-                        StartCoroutine(signedRequestCoroutine(request, cachedRequestHandler(request, null)));
-                    }
+                    StartCoroutine(signedRequestCoroutine(request, cachedRequestHandler(request, null)));
                 }
             }
         }
