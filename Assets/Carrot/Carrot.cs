@@ -229,6 +229,16 @@ public partial class Carrot : MonoBehaviour
     }
 
     /// <summary>
+    /// An app-specified tag for associating metrics with A/B testing groups or other purposes.
+    /// </summary>
+    /// <value>The assigned tag.</value>
+    public string Tag
+    {
+        get;
+        set;
+    }
+
+    /// <summary>
     /// Validate a Facebook user to allow posting of Carrot events.
     /// </summary>
     /// <remarks>
@@ -252,7 +262,7 @@ public partial class Carrot : MonoBehaviour
             throw new ArgumentNullException("achievementId must not be null or empty string.", "achievementId");
         }
 
-        StartCoroutine(cachedRequestCoroutine("/me/achievements.json", new Dictionary<string, object>() {
+        StartCoroutine(cachedRequestCoroutine(ServiceType.Post, "/me/achievements.json", new Dictionary<string, object>() {
                 {"achievement_id", achievementId}
         }, callback));
     }
@@ -264,7 +274,7 @@ public partial class Carrot : MonoBehaviour
     /// <param name="callback">Optional <see cref="CarrotRequestResponse"/> which will be used to deliver the reply.</param>
     public void postHighScore(uint score, CarrotRequestResponse callback = null)
     {
-        StartCoroutine(cachedRequestCoroutine("/me/scores.json", new Dictionary<string, object>() {
+        StartCoroutine(cachedRequestCoroutine(ServiceType.Post, "/me/scores.json", new Dictionary<string, object>() {
                 {"value", score}
         }, callback));
     }
@@ -307,7 +317,7 @@ public partial class Carrot : MonoBehaviour
         };
         if(objectInstanceId != null) parameters["object_instance_id"] = objectInstanceId;
 
-        StartCoroutine(cachedRequestCoroutine("/me/actions.json", parameters, callback));
+        StartCoroutine(cachedRequestCoroutine(ServiceType.Post, "/me/actions.json", parameters, callback));
     }
 
     /// <summary>
@@ -516,7 +526,7 @@ public partial class Carrot : MonoBehaviour
             {"action_properties", actionProperties == null ? new Dictionary<string, object>() : actionProperties},
             {"object_properties", viralObject.toDictionary()}
         };
-        StartCoroutine(cachedRequestCoroutine("/me/actions.json", parameters, callback));
+        StartCoroutine(cachedRequestCoroutine(ServiceType.Post, "/me/actions.json", parameters, callback));
     }
 
     /// <summary>
@@ -525,7 +535,7 @@ public partial class Carrot : MonoBehaviour
     /// <param name="callback">Optional <see cref="CarrotRequestResponse"/> which will be used to deliver the reply.</param>
     public void likeGame(CarrotRequestResponse callback = null)
     {
-        StartCoroutine(cachedRequestCoroutine("/me/like.json", new Dictionary<string, object>() {
+        StartCoroutine(cachedRequestCoroutine(ServiceType.Post, "/me/like.json", new Dictionary<string, object>() {
             {"object", "game"}
         }, callback));
     }
@@ -536,7 +546,7 @@ public partial class Carrot : MonoBehaviour
     /// <param name="callback">Optional <see cref="CarrotRequestResponse"/> which will be used to deliver the reply.</param>
     public void likePublisher(CarrotRequestResponse callback = null)
     {
-        StartCoroutine(cachedRequestCoroutine("/me/like.json", new Dictionary<string, object>() {
+        StartCoroutine(cachedRequestCoroutine(ServiceType.Post, "/me/like.json", new Dictionary<string, object>() {
             {"object", "publisher"}
         }, callback));
     }
@@ -553,7 +563,7 @@ public partial class Carrot : MonoBehaviour
             throw new ArgumentNullException("achievementId must not be null or empty string.", "achievementId");
         }
 
-        StartCoroutine(cachedRequestCoroutine("/me/like.json", new Dictionary<string, object>() {
+        StartCoroutine(cachedRequestCoroutine(ServiceType.Post, "/me/like.json", new Dictionary<string, object>() {
             {"object", "achievement:" + achievementId}
         }, callback));
     }
@@ -570,7 +580,7 @@ public partial class Carrot : MonoBehaviour
             throw new ArgumentNullException("objectId must not be null or empty string.", "objectId");
         }
 
-        StartCoroutine(cachedRequestCoroutine("/me/like.json", new Dictionary<string, object>() {
+        StartCoroutine(cachedRequestCoroutine(ServiceType.Post, "/me/like.json", new Dictionary<string, object>() {
             {"object", "object:" + objectId}
         }, callback));
     }
@@ -609,6 +619,7 @@ public partial class Carrot : MonoBehaviour
     void Start()
     {
         DontDestroyOnLoad(this);
+        StartCoroutine(servicesDiscoveryCoroutine());
     }
 
     void OnApplicationQuit()
@@ -619,11 +630,77 @@ public partial class Carrot : MonoBehaviour
     /// @endcond
     #endregion
 
+    #region Service Type
+    /// @cond hide_from_doxygen
+    public enum ServiceType : int
+    {
+        Auth    = -2,
+        Metrics = -1,
+        Post    = 2
+    }
+
+    private string hostForServiceType(ServiceType type)
+    {
+        switch(type)
+        {
+            case ServiceType.Auth: return mAuthHostname;
+            case ServiceType.Metrics: return mMetricsHostname;
+            case ServiceType.Post: return mPostHostname;
+        }
+        return null;
+    }
+    /// @endcond
+    #endregion
+
     #region Carrot request coroutines
     /// @cond hide_from_doxygen
+    private void addCommonPayloadFields(UnityEngine.WWWForm payload)
+    {
+        payload.AddField("app_version", mBundleVersion);
+        if(!string.IsNullOrEmpty(this.Tag)) payload.AddField("tag", this.Tag);
+    }
+
+    private IEnumerator servicesDiscoveryCoroutine()
+    {
+        string urlString = String.Format("http://{0}/services.json?sdk_version={1}&sdk_platform={2}&game_id={3}&app_version={4}",
+            mServicesDiscoveryHost,
+            UnityEngine.WWW.EscapeURL(Carrot.SDKVersion),
+            UnityEngine.WWW.EscapeURL(SystemInfo.operatingSystem.Replace(" ", "_").ToLower()),
+            UnityEngine.WWW.EscapeURL(mFacebookAppId),
+            UnityEngine.WWW.EscapeURL(mBundleVersion));
+
+        UnityEngine.WWW request = new UnityEngine.WWW(urlString);
+        yield return request;
+
+        if(request.error == null)
+        {
+            Dictionary<string, object> reply = Json.Deserialize(request.text) as Dictionary<string, object>;
+            mPostHostname = reply["post"] as string;
+            mAuthHostname = reply["auth"] as string;
+            mMetricsHostname = reply["metrics"] as string;
+
+            if(!string.IsNullOrEmpty(mAccessTokenOrFacebookId))
+            {
+                validateUser(mAccessTokenOrFacebookId);
+            }
+        }
+        else
+        {
+            Debug.Log(request.error);
+        }
+    }
+
     private IEnumerator validateUserCoroutine(string accessTokenOrFacebookId)
     {
         AuthStatus ret = AuthStatus.Undetermined;
+        string hostname = hostForServiceType(ServiceType.Auth);
+        mAccessTokenOrFacebookId = accessTokenOrFacebookId;
+
+        if(string.IsNullOrEmpty(hostname))
+        {
+            return false;
+        }
+
         if(string.IsNullOrEmpty(mUserId))
         {
             throw new NullReferenceException("UserId is empty. Assign a UserId before calling validateUser");
@@ -632,10 +709,11 @@ public partial class Carrot : MonoBehaviour
         ServicePointManager.ServerCertificateValidationCallback = CarrotCertValidator;
 
         UnityEngine.WWWForm payload = new UnityEngine.WWWForm();
-        payload.AddField("access_token", accessTokenOrFacebookId);
+        payload.AddField("access_token", mAccessTokenOrFacebookId);
         payload.AddField("api_key", mUserId);
+        addCommonPayloadFields(payload);
 
-        UnityEngine.WWW request = new UnityEngine.WWW(String.Format("https://{0}/games/{1}/users.json", mHostname, mFacebookAppId), payload);
+        UnityEngine.WWW request = new UnityEngine.WWW(String.Format("https://{0}/games/{1}/users.json", hostname, mFacebookAppId), payload);
         yield return request;
 
         int statusCode = 0;
@@ -681,12 +759,13 @@ public partial class Carrot : MonoBehaviour
         yield return ret;
     }
 
-    private IEnumerator cachedRequestCoroutine(string endpoint,
+    private IEnumerator cachedRequestCoroutine(ServiceType serviceType,
+                                               string endpoint,
                                                Dictionary<string, object> parameters,
                                                CarrotRequestResponse callback = null)
     {
-        CarrotCache.CachedRequest cachedRequest = mCarrotCache.CacheRequest(endpoint, parameters);
-        if(mAuthStatus == AuthStatus.Ready)
+        CarrotCache.CachedRequest cachedRequest = mCarrotCache.CacheRequest(serviceType, endpoint, parameters);
+        if((int)serviceType <= (int)mAuthStatus)
         {
             yield return StartCoroutine(signedRequestCoroutine(cachedRequest, cachedRequestHandler(cachedRequest, callback)));
         }
@@ -702,10 +781,17 @@ public partial class Carrot : MonoBehaviour
     {
         Response ret = Response.UnknownError;
         string errorText = null;
+        string hostname = hostForServiceType(cachedRequest.ServiceType);
+
+        if(string.IsNullOrEmpty(hostname))
+        {
+            if(callback != null) callback(Response.NetworkError, "");
+            return false;
+        }
 
         if(string.IsNullOrEmpty(mUserId))
         {
-            throw new NullReferenceException("UserId is empty. Assign a UserId before calling validateUser");
+            throw new NullReferenceException("UserId is empty. Assign a UserId before using Carrot.");
         }
 
         ServicePointManager.ServerCertificateValidationCallback = CarrotCertValidator;
@@ -770,10 +856,11 @@ public partial class Carrot : MonoBehaviour
             }
         }
         string payload = String.Join("&", kvList.ToArray());
-        string signString = String.Format("{0}\n{1}\n{2}\n{3}", "POST", mHostname.Split(new char[]{':'})[0], cachedRequest.Endpoint, payload);
+        string signString = String.Format("{0}\n{1}\n{2}\n{3}", "POST", hostname.Split(new char[]{':'})[0], cachedRequest.Endpoint, payload);
         string sig = AWSSDKUtils.HMACSign(signString, mCarrotAppSecret, KeyedHashAlgorithm.Create("HMACSHA256"));
 
         UnityEngine.WWWForm formPayload = new UnityEngine.WWWForm();
+        addCommonPayloadFields(formPayload);
         foreach(string key in keys)
         {
             string asStr;
@@ -795,7 +882,7 @@ public partial class Carrot : MonoBehaviour
             formPayload.AddBinaryData("image_bytes", imageBytes);
         }
 
-        UnityEngine.WWW request = new UnityEngine.WWW(String.Format("https://{0}{1}", mHostname, cachedRequest.Endpoint), formPayload);
+        UnityEngine.WWW request = new UnityEngine.WWW(String.Format("https://{0}{1}", hostname, cachedRequest.Endpoint), formPayload);
         yield return request;
 
         int statusCode = 0;
@@ -876,10 +963,14 @@ public partial class Carrot : MonoBehaviour
     private static Carrot mInstance = null;
     private AuthStatus mAuthStatus;
     private string mUserId;
-    private string mHostname = "gocarrot.com";
+    private string mServicesDiscoveryHost = "services.gocarrot.com";
+    private string mPostHostname;
+    private string mAuthHostname;
+    private string mMetricsHostname;
     private string mFacebookAppId;
     private string mCarrotAppSecret;
     private string mBundleVersion;
+    private string mAccessTokenOrFacebookId;
     private CarrotCache mCarrotCache;
     #endregion
 }

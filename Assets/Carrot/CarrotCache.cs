@@ -60,9 +60,10 @@ public class CarrotCache : IDisposable
 #endif
     }
 
-    public CachedRequest CacheRequest(string endpoint, Dictionary<string, object> parameters)
+    public CachedRequest CacheRequest(Carrot.ServiceType serviceType, string endpoint, Dictionary<string, object> parameters)
     {
         CachedRequest ret = new CachedRequest();
+        ret.ServiceType = serviceType;
         ret.Endpoint = endpoint;
         ret.Parameters = parameters;
         ret.RequestDate = (int)((DateTime.Now.ToUniversalTime().Ticks - 621355968000000000) / 10000000);
@@ -97,14 +98,14 @@ public class CarrotCache : IDisposable
         return ret;
     }
 
-    public List<CachedRequest> RequestsInCache(int authStatus)
+    public List<CachedRequest> RequestsInCache(Carrot.ServiceType authStatus)
     {
         List<CachedRequest> cachedRequests = new List<CachedRequest>();
 #if CACHE_ENABLED
         IntPtr sqlStatement = IntPtr.Zero;
         lock(this)
         {
-            string sql = string.Format(kCacheReadSQL, authStatus);
+            string sql = string.Format(kCacheReadSQL, (int)authStatus);
             if(sqlite3_prepare_v2(mDBPtr, kCacheReadSQL, -1, out sqlStatement, IntPtr.Zero) == SQLITE_OK)
             {
                 while(sqlite3_step(sqlStatement) == SQLITE_ROW)
@@ -139,7 +140,7 @@ public class CarrotCache : IDisposable
             internal set;
         }
 
-        public int ServiceType
+        public Carrot.ServiceType ServiceType
         {
             get;
             internal set;
