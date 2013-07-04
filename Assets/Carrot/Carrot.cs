@@ -128,6 +128,9 @@ public partial class Carrot : MonoBehaviour
         UnknownError,
     }
 
+    /// <summary>Carrot SDK version.</summary>
+    public static readonly string SDKVersion = "1.1.0";
+
     /// <summary>
     /// Carrot debug users which can be assigned to UserId in order to simulate
     /// different cases for use.
