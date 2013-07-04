@@ -185,10 +185,13 @@ public partial class Carrot : MonoBehaviour
         }
         private set
         {
-            if(AuthenticationStatusChanged != null && mAuthStatus != value)
+            if(mAuthStatus != value)
             {
                 mAuthStatus = value;
-                AuthenticationStatusChanged(this, mAuthStatus);
+                if(AuthenticationStatusChanged != null)
+                {
+                    AuthenticationStatusChanged(this, mAuthStatus);
+                }
 
                 if(mAuthStatus == AuthStatus.Ready)
                 {
