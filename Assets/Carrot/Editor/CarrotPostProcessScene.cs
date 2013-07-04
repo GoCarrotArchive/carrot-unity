@@ -24,11 +24,16 @@ public class CarrotPostProcessScene
     {
         if(string.IsNullOrEmpty(CarrotSettings.CarrotAppId))
         {
-            Debug.LogWarning("Carrot App Id needs to be assigned in the Edit/Carrot menu.");
+            Debug.LogError("Carrot App Id needs to be assigned in the Edit/Carrot menu.");
         }
         if(string.IsNullOrEmpty(CarrotSettings.CarrotAppSecret))
         {
-            Debug.LogWarning("Carrot App Secret needs to be assigned in the Edit/Carrot menu.");
+            Debug.LogError("Carrot App Secret needs to be assigned in the Edit/Carrot menu.");
+        }
+
+        if(PlayerSettings.iOS.exitOnSuspend)
+        {
+            Debug.LogWarning("Your app is set to exit when it is suspended on iOS (when the Home button is pushed). This will prevent Carrot from tracking session times.");
         }
     }
 }
