@@ -29,6 +29,24 @@ using System.Runtime.InteropServices;
 /// @cond hide_from_doxygen
 public class CarrotCache : IDisposable
 {
+    public bool InstallMetricSent
+    {
+        get;
+        private set;
+    }
+
+    public long InstallDate
+    {
+        get;
+        private set;
+    }
+
+    public void markInstallMetricSent()
+    {
+        sqlite3_exec(mDBPtr, kInstallTableMetricSentSQL, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero);
+        this.InstallMetricSent = true;
+    }
+
     public CarrotCache()
     {
 #if CACHE_ENABLED
@@ -39,23 +57,40 @@ public class CarrotCache : IDisposable
         }
         else
         {
-            IntPtr sqlStatement = IntPtr.Zero;
-            if(sqlite3_prepare_v2(mDBPtr, kCacheCreateSQL, -1, out sqlStatement, IntPtr.Zero) == SQLITE_OK)
-            {
-                if(sqlite3_step(sqlStatement) != SQLITE_DONE)
-                {
-                    Debug.Log("Failed to create Carrot request cache. Error: " + sqlite3_errmsg(mDBPtr));
-                    sqlite3_close(mDBPtr);
-                    mDBPtr = IntPtr.Zero;
-                }
-            }
-            else
+            if(sqlite3_exec(mDBPtr, kCacheCreateSQL, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero) != SQLITE_OK)
             {
                 Debug.Log("Failed to create Carrot request cache. Error: " + sqlite3_errmsg(mDBPtr));
                 sqlite3_close(mDBPtr);
                 mDBPtr = IntPtr.Zero;
             }
-            sqlite3_finalize(sqlStatement);
+            else if(sqlite3_exec(mDBPtr, kInstallTableCreateSQL, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero) != SQLITE_OK)
+            {
+                Debug.Log("Failed to create Carrot request cache. Error: " + sqlite3_errmsg(mDBPtr));
+                sqlite3_close(mDBPtr);
+                mDBPtr = IntPtr.Zero;
+            }
+            else
+            {
+                IntPtr sqlStatement = IntPtr.Zero;
+                double cachedInstallDate = 0.0;
+                if(sqlite3_prepare_v2(mDBPtr, kInstallTableReadSQL, -1, out sqlStatement, IntPtr.Zero) == SQLITE_OK)
+                {
+                    while(sqlite3_step(sqlStatement) == SQLITE_ROW)
+                    {
+                        cachedInstallDate = sqlite3_column_double(sqlStatement, 0);
+                        this.InstallMetricSent = sqlite3_column_int(sqlStatement, 1) > 0 ? true : false;
+                    }
+                }
+                sqlite3_finalize(sqlStatement);
+
+                if(cachedInstallDate < 1.0)
+                {
+                    cachedInstallDate = (DateTime.Now.ToUniversalTime().Ticks - 621355968000000000) / 10000000;
+                    string sql = string.Format(kInstallTableUpdateSQL, cachedInstallDate);
+                    sqlite3_exec(mDBPtr, sql, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero);
+                }
+                this.InstallDate = (long)cachedInstallDate;
+            }
         }
 #endif
     }
@@ -66,7 +101,7 @@ public class CarrotCache : IDisposable
         ret.ServiceType = serviceType;
         ret.Endpoint = endpoint;
         ret.Parameters = parameters;
-        ret.RequestDate = (int)((DateTime.Now.ToUniversalTime().Ticks - 621355968000000000) / 10000000);
+        ret.RequestDate = (long)((DateTime.Now.ToUniversalTime().Ticks - 621355968000000000) / 10000000);
         ret.RequestId = System.Guid.NewGuid().ToString();
         ret.Retries = 0;
 
@@ -98,7 +133,7 @@ public class CarrotCache : IDisposable
         return ret;
     }
 
-    public List<CachedRequest> RequestsInCache(Carrot.ServiceType authStatus)
+    public List<CachedRequest> RequestsInCache(Carrot.AuthStatus authStatus)
     {
         List<CachedRequest> cachedRequests = new List<CachedRequest>();
 #if CACHE_ENABLED
@@ -106,17 +141,17 @@ public class CarrotCache : IDisposable
         lock(this)
         {
             string sql = string.Format(kCacheReadSQL, (int)authStatus);
-            if(sqlite3_prepare_v2(mDBPtr, kCacheReadSQL, -1, out sqlStatement, IntPtr.Zero) == SQLITE_OK)
+            if(sqlite3_prepare_v2(mDBPtr, sql, -1, out sqlStatement, IntPtr.Zero) == SQLITE_OK)
             {
                 while(sqlite3_step(sqlStatement) == SQLITE_ROW)
                 {
                     CachedRequest request = new CachedRequest();
                     request.CacheId = sqlite3_column_int64(sqlStatement, 0);
-                    request.ServiceType = sqlite3_column_int(sqlStatement, 1);
+                    request.ServiceType = (Carrot.ServiceType)sqlite3_column_int(sqlStatement, 1);
                     request.Endpoint = sqlite3_column_text(sqlStatement, 2);
                     request.Parameters = Json.Deserialize(sqlite3_column_text(sqlStatement, 3)) as Dictionary<string, object>;
                     request.RequestId = sqlite3_column_text(sqlStatement, 4);
-                    request.RequestDate = (int)sqlite3_column_double(sqlStatement, 5);
+                    request.RequestDate = (long)sqlite3_column_double(sqlStatement, 5);
                     request.Retries = sqlite3_column_int(sqlStatement, 6);
                     request.Cache = this;
                     cachedRequests.Add(request);
@@ -158,7 +193,7 @@ public class CarrotCache : IDisposable
             internal set;
         }
 
-        public int RequestDate
+        public long RequestDate
         {
             get;
             internal set;
@@ -287,6 +322,11 @@ public class CarrotCache : IDisposable
     private const string kCacheUpdateSQL = "UPDATE cache SET retry_count='{0}' WHERE rowid='{1}'";
     private const string kCacheDeleteSQL = "DELETE FROM cache WHERE rowid='{0}'";
 
+    private const string kInstallTableCreateSQL = "CREATE TABLE IF NOT EXISTS install_tracking(install_date REAL, metric_sent INTEGER)";
+    private const string kInstallTableReadSQL = "SELECT MAX(install_date), metric_sent FROM install_tracking";
+    private const string kInstallTableUpdateSQL = "INSERT INTO install_tracking (install_date, metric_sent) VALUES ({0}, 0)";
+    private const string kInstallTableMetricSentSQL = "UPDATE install_tracking SET metric_sent=1";
+
 #if UNITY_IPHONE
     private const string DLL_IMPORT_TARGET = "__Internal";
 #else
@@ -305,6 +345,9 @@ public class CarrotCache : IDisposable
 
     [DllImport(DLL_IMPORT_TARGET)]
     private extern static int sqlite3_prepare_v2(IntPtr db, string zSql, int nByte, out IntPtr ppStmpt, IntPtr pzTail);
+
+    [DllImport(DLL_IMPORT_TARGET)]
+    private extern static int sqlite3_exec(IntPtr db, string zSql, IntPtr callback, IntPtr cbArg, IntPtr errmsg);
 
     [DllImport(DLL_IMPORT_TARGET)]
     private static extern int sqlite3_finalize(IntPtr stmHandle);

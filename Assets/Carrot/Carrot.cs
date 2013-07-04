@@ -238,6 +238,12 @@ public partial class Carrot : MonoBehaviour
         set;
     }
 
+    public DateTime InstallDate
+    {
+        get;
+        private set;
+    }
+
     /// <summary>
     /// Validate a Facebook user to allow posting of Carrot events.
     /// </summary>
@@ -590,6 +596,7 @@ public partial class Carrot : MonoBehaviour
     Carrot()
     {
         mCarrotCache = new CarrotCache();
+        this.InstallDate = new DateTime(1970, 1, 1, 0, 0, 0, 0).AddSeconds(mCarrotCache.InstallDate);
     }
 
     private CarrotRequestResponse cachedRequestHandler(CarrotCache.CachedRequest cachedRequest,
@@ -614,12 +621,33 @@ public partial class Carrot : MonoBehaviour
     /// @endcond
     #endregion
 
+    #region Metrics
+    /// @cond hide_from_doxygen
+    private IEnumerator sendInstallMetricIfNeeded()
+    {
+        if(!mCarrotCache.InstallMetricSent)
+        {
+            yield return StartCoroutine(cachedRequestCoroutine(ServiceType.Metrics, "/install.json", new Dictionary<string, object>() {
+                    {"install_date", mCarrotCache.InstallDate}
+            }, (Response response, string errorText) => {
+                if(response == Response.OK)
+                {
+                    mCarrotCache.markInstallMetricSent();
+                }
+            }));
+        }
+        yield return null;
+    }
+    /// @endcond
+    #endregion
+
     #region MonoBehaviour
     /// @cond hide_from_doxygen
     void Start()
     {
         DontDestroyOnLoad(this);
         StartCoroutine(servicesDiscoveryCoroutine());
+        StartCoroutine(sendInstallMetricIfNeeded());
     }
 
     void OnApplicationQuit()
@@ -682,6 +710,13 @@ public partial class Carrot : MonoBehaviour
             if(!string.IsNullOrEmpty(mAccessTokenOrFacebookId))
             {
                 validateUser(mAccessTokenOrFacebookId);
+            }
+            else
+            {
+                foreach(CarrotCache.CachedRequest crequest in mCarrotCache.RequestsInCache(mAuthStatus))
+                {
+                    StartCoroutine(signedRequestCoroutine(crequest, cachedRequestHandler(crequest, null)));
+                }
             }
         }
         else
@@ -771,7 +806,7 @@ public partial class Carrot : MonoBehaviour
         }
         else
         {
-            if(callback != null) callback(Response.UnknownError, authStatusString(mAuthStatus));
+            if(callback != null) callback(Response.OK, authStatusString(mAuthStatus));
             yield return null;
         }
     }
@@ -785,7 +820,7 @@ public partial class Carrot : MonoBehaviour
 
         if(string.IsNullOrEmpty(hostname))
         {
-            if(callback != null) callback(Response.NetworkError, "");
+            if(callback != null) callback(Response.OK, "");
             return false;
         }
 
