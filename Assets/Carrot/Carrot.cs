@@ -121,8 +121,11 @@ public partial class Carrot : MonoBehaviour
         /// <summary>Dynamic OG object not created due to parameter error.</summary>
         ParameterError,
 
+        /// <summary>Network error.</summary>
+        NetworkError,
+
         /// <summary>Undetermined error.</summary>
-        UnknownError
+        UnknownError,
     }
 
     /// <summary>
