@@ -910,37 +910,37 @@ public partial class Carrot : MonoBehaviour
             case 201:
             case 200: // Successful
                 ret = Response.OK;
-                this.Status = AuthStatus.Ready;
+                if(cachedRequest.ServiceType != ServiceType.Metrics) this.Status = AuthStatus.Ready;
                 break;
 
             case 401: // User has not authorized 'publish_actions', read only
                 ret = Response.ReadOnly;
-                this.Status = AuthStatus.ReadOnly;
+                if(cachedRequest.ServiceType != ServiceType.Metrics) this.Status = AuthStatus.ReadOnly;
                 break;
 
             case 402: // Service tier exceeded, not posted
                 ret = Response.UserLimitHit;
-                this.Status = AuthStatus.Ready;
+                if(cachedRequest.ServiceType != ServiceType.Metrics) this.Status = AuthStatus.Ready;
                 break;
 
             case 403: // Authentication error, app secret incorrect
                 ret = Response.BadAppSecret;
-                this.Status = AuthStatus.Ready;
+                if(cachedRequest.ServiceType != ServiceType.Metrics) this.Status = AuthStatus.Ready;
                 break;
 
             case 404: // Resource not found
                 ret = Response.NotFound;
-                this.Status = AuthStatus.Ready;
+                if(cachedRequest.ServiceType != ServiceType.Metrics) this.Status = AuthStatus.Ready;
                 break;
 
             case 405: // User is not authorized for Facebook App
                 ret = Response.NotAuthorized;
-                this.Status = AuthStatus.NotAuthorized;
+                if(cachedRequest.ServiceType != ServiceType.Metrics) this.Status = AuthStatus.NotAuthorized;
                 break;
 
             case 424: // Dynamic OG object not created due to parameter error
                 ret = Response.ParameterError;
-                this.Status = AuthStatus.Ready;
+                if(cachedRequest.ServiceType != ServiceType.Metrics) this.Status = AuthStatus.Ready;
                 break;
         }
         if(callback != null) callback(ret, errorText);
