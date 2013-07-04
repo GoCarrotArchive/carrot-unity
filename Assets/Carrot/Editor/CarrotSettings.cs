@@ -98,6 +98,7 @@ public class CarrotSettings : EditorWindow
         Dictionary<string, object> carrotConfig = new Dictionary<string, object>();
         carrotConfig["carrotAppId"] = mCarrotAppId;
         carrotConfig["carrotAppSecret"] = mCarrotAppSecret;
+        carrotConfig["appBundleVersion"] = PlayerSettings.bundleVersion.ToString();
 
         System.IO.Directory.CreateDirectory(Application.dataPath + "/Resources");
         File.WriteAllText(Application.dataPath + "/Resources/carrot.bytes", Json.Serialize(carrotConfig));

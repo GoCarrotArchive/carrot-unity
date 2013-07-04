@@ -69,6 +69,7 @@ public partial class Carrot : MonoBehaviour
                         carrotConfig = Json.Deserialize(carrotJson.text) as Dictionary<string, object>;
                         mInstance.mFacebookAppId = carrotConfig["carrotAppId"] as string;
                         mInstance.mCarrotAppSecret = carrotConfig["carrotAppSecret"] as string;
+                        mInstance.mBundleVersion = carrotConfig["appBundleVersion"] as string;
                     }
                 }
             }
@@ -872,6 +873,7 @@ public partial class Carrot : MonoBehaviour
     private string mHostname = "gocarrot.com";
     private string mFacebookAppId;
     private string mCarrotAppSecret;
+    private string mBundleVersion;
     private CarrotCache mCarrotCache;
     #endregion
 }
