@@ -423,6 +423,20 @@ public partial class Carrot : MonoBehaviour
         }, callback));
     }
 
+    /// <summary>
+    /// Inform Carrot about a purchase of premium currency for metrics tracking.
+    /// </summary>
+    /// <param name="amount">The amount of real money spent.</param>
+    /// <param name="currency">The type of real money spent (eg. USD).</param>
+    /// <param name="callback">Optional <see cref="CarrotRequestResponse"/> which will be used to deliver the reply.</param>
+    public void postPremiumCurrencyPurchase(float amount, string currency, CarrotRequestResponse callback = null)
+    {
+        StartCoroutine(cachedRequestCoroutine(ServiceType.Metrics, "/purchase.json", new Dictionary<string, object>() {
+            {"amount", amount},
+            {"currency", currency}
+        }, callback));
+    }
+
     #region Internal
     /// @cond hide_from_doxygen
     Carrot()
