@@ -484,6 +484,11 @@ public partial class Carrot : MonoBehaviour
         }
         yield return null;
     }
+
+    private IEnumerator sendAppOpenedEvent()
+    {
+        yield return StartCoroutine(cachedRequestCoroutine(ServiceType.Metrics, "/app_opened.json", new Dictionary<string, object>() {}, null));
+    }
     /// @endcond
     #endregion
 
@@ -493,10 +498,12 @@ public partial class Carrot : MonoBehaviour
     {
         DontDestroyOnLoad(this);
         StartCoroutine(servicesDiscoveryCoroutine());
-        StartCoroutine(sendInstallMetricIfNeeded());
 
 #if UNITY_IPHONE || UNITY_ANDROID
+        StartCoroutine(sendInstallMetricIfNeeded());
         mSessionStartTime = (DateTime.Now.ToUniversalTime().Ticks - 621355968000000000) / 10000000;
+#else
+        StartCoroutine(sendAppOpenedEvent());
 #endif
     }
 
