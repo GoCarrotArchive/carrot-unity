@@ -43,7 +43,9 @@ public class CarrotCache : IDisposable
 
     public void markInstallMetricSent()
     {
+#if CACHE_ENABLED
         sqlite3_exec(mDBPtr, kInstallTableMetricSentSQL, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero);
+#endif
         this.InstallMetricSent = true;
     }
 
