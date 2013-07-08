@@ -94,6 +94,8 @@ public class CarrotCache : IDisposable
                 this.InstallDate = (long)cachedInstallDate;
             }
         }
+#else
+        mCachedRequests = new List<CachedRequest>();
 #endif
     }
 
@@ -131,6 +133,12 @@ public class CarrotCache : IDisposable
             }
         }
         sqlite3_finalize(sqlStatement);
+#else
+        lock(this)
+        {
+            ret.Cache = this;
+            mCachedRequests.Add(ret);
+        }
 #endif
         return ret;
     }
@@ -165,6 +173,18 @@ public class CarrotCache : IDisposable
             }
         }
         sqlite3_finalize(sqlStatement);
+#else
+        lock(this)
+        {
+            foreach(CarrotCache.CachedRequest crequest in mCachedRequests)
+            {
+                if((int)crequest.ServiceType <= (int)authStatus)
+                {
+                    //Debug.Log("Somethingsomething: " + crequest);
+                    cachedRequests.Add(crequest);
+                }
+            }
+        }
 #endif
         return cachedRequests;
     }
@@ -249,6 +269,11 @@ public class CarrotCache : IDisposable
                 }
             }
             sqlite3_finalize(sqlStatement);
+#else
+            lock(this.Cache)
+            {
+                this.Cache.mCachedRequests.Remove(this);
+            }
 #endif
             return ret;
         }
@@ -373,7 +398,9 @@ public class CarrotCache : IDisposable
     private static extern int sqlite3_column_int(IntPtr stmHandle, int iCol);
 
     internal IntPtr mDBPtr;
-#endif // CACHE_ENABLED
+#else // CACHE_ENABLED
+    internal List<CachedRequest> mCachedRequests;
+#endif
 #endregion
     internal bool mIsDisposed = false;
 }
