@@ -689,6 +689,32 @@ public partial class Carrot : MonoBehaviour
         }
     }
 
+    public static string signParams(string hostname, string endpoint, string secret, Dictionary<string, object> urlParams)
+    {
+        // Build sorted list of key-value pairs
+        string[] keys = new string[urlParams.Keys.Count];
+        urlParams.Keys.CopyTo(keys, 0);
+        Array.Sort(keys);
+        List<string> kvList = new List<string>();
+        foreach(string key in keys)
+        {
+            string asStr;
+            if((asStr = urlParams[key] as string) != null)
+            {
+                kvList.Add(String.Format("{0}={1}", key, asStr));
+            }
+            else
+            {
+                kvList.Add(String.Format("{0}={1}", key,
+                    Json.Serialize(urlParams[key])));
+            }
+        }
+        string payload = String.Join("&", kvList.ToArray());
+        string signString = String.Format("{0}\n{1}\n{2}\n{3}", "POST", hostname.Split(new char[]{':'})[0], endpoint, payload);
+        string sig = AWSSDKUtils.HMACSign(signString, secret, KeyedHashAlgorithm.Create("HMACSHA256"));
+        return sig;
+    }
+
     private IEnumerator signedRequestCoroutine(CarrotCache.CachedRequest cachedRequest,
                                                CarrotRequestResponse callback = null)
     {
@@ -750,30 +776,11 @@ public partial class Carrot : MonoBehaviour
             }
         }
 
-        // Build sorted list of key-value pairs
-        string[] keys = new string[urlParams.Keys.Count];
-        urlParams.Keys.CopyTo(keys, 0);
-        Array.Sort(keys);
-        List<string> kvList = new List<string>();
-        foreach(string key in keys)
-        {
-            string asStr;
-            if((asStr = urlParams[key] as string) != null)
-            {
-                kvList.Add(String.Format("{0}={1}", key, asStr));
-            }
-            else
-            {
-                kvList.Add(String.Format("{0}={1}", key,
-                    Json.Serialize(urlParams[key])));
-            }
-        }
-        string payload = String.Join("&", kvList.ToArray());
-        string signString = String.Format("{0}\n{1}\n{2}\n{3}", "POST", hostname.Split(new char[]{':'})[0], cachedRequest.Endpoint, payload);
-        string sig = AWSSDKUtils.HMACSign(signString, mCarrotAppSecret, KeyedHashAlgorithm.Create("HMACSHA256"));
-
         UnityEngine.WWWForm formPayload = new UnityEngine.WWWForm();
         addCommonPayloadFields(formPayload);
+
+        string[] keys = new string[urlParams.Keys.Count];
+        urlParams.Keys.CopyTo(keys, 0);
         foreach(string key in keys)
         {
             string asStr;
@@ -787,6 +794,8 @@ public partial class Carrot : MonoBehaviour
                     Json.Serialize(urlParams[key]));
             }
         }
+
+        string sig = signParams(hostname, cachedRequest.Endpoint, mCarrotAppSecret, urlParams);
         formPayload.AddField("sig", sig);
 
         // Attach image
