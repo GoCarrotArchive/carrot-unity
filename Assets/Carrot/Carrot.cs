@@ -596,7 +596,10 @@ public partial class Carrot : MonoBehaviour
         }
         else
         {
+            // Log error and retry in 10 seconds
             Debug.Log(request.error);
+            yield return new WaitForSeconds(10);
+            StartCoroutine(servicesDiscoveryCoroutine());
         }
     }
 
