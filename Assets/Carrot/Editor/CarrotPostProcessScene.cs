@@ -31,6 +31,11 @@ public class CarrotPostProcessScene
             Debug.LogError("Carrot App Secret needs to be assigned in the Edit/Carrot menu.");
         }
 
+        if(!CarrotSettings.AppValid)
+        {
+            Debug.LogWarning("Your Carrot settings have not been validated. Click 'Validate Settings' in the Edit/Carrot menu.");
+        }
+
         if(PlayerSettings.iOS.exitOnSuspend)
         {
             Debug.LogWarning("Your app is set to exit when it is suspended on iOS (when the Home button is pushed). This will prevent Carrot from tracking session times.");
