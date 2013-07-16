@@ -70,6 +70,11 @@ public partial class Carrot : MonoBehaviour
                         mInstance.mFacebookAppId = carrotConfig["carrotAppId"] as string;
                         mInstance.mCarrotAppSecret = carrotConfig["carrotAppSecret"] as string;
                         mInstance.mBundleVersion = carrotConfig["appBundleVersion"] as string;
+
+                        if(string.IsNullOrEmpty(mInstance.mFacebookAppId))
+                        {
+                            throw new ArgumentException("Carrot App Id has not been configured. Use the configuration tool in the 'Edit/Carrot' menu to assign your Carrot App Id and Secret.");
+                        }
                     }
                 }
             }
