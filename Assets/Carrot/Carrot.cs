@@ -562,10 +562,15 @@ public partial class Carrot : MonoBehaviour
 
     #region Carrot request coroutines
     /// @cond hide_from_doxygen
-    private void addCommonPayloadFields(UnityEngine.WWWForm payload)
+    private void addCommonPayloadFields(UnityEngine.WWWForm payload, Dictionary<string, object> urlParams)
     {
         payload.AddField("app_version", mBundleVersion);
-        if(!string.IsNullOrEmpty(this.Tag)) payload.AddField("tag", this.Tag);
+        if(urlParams != null) urlParams.Add("app_version", mBundleVersion);
+        if(!string.IsNullOrEmpty(this.Tag))
+        {
+            payload.AddField("tag", this.Tag);
+            if(urlParams != null) urlParams.Add("tag", this.Tag);
+        }
     }
 
     private IEnumerator servicesDiscoveryCoroutine()
@@ -629,7 +634,7 @@ public partial class Carrot : MonoBehaviour
         UnityEngine.WWWForm payload = new UnityEngine.WWWForm();
         payload.AddField("access_token", mAccessTokenOrFacebookId);
         payload.AddField("api_key", mUserId);
-        addCommonPayloadFields(payload);
+        addCommonPayloadFields(payload, null);
 
         UnityEngine.WWW request = new UnityEngine.WWW(String.Format("https://{0}/games/{1}/users.json", hostname, mFacebookAppId), payload);
         yield return request;
@@ -782,7 +787,7 @@ public partial class Carrot : MonoBehaviour
         }
 
         UnityEngine.WWWForm formPayload = new UnityEngine.WWWForm();
-        addCommonPayloadFields(formPayload);
+        addCommonPayloadFields(formPayload, urlParams);
 
         string[] keys = new string[urlParams.Keys.Count];
         urlParams.Keys.CopyTo(keys, 0);
