@@ -575,41 +575,49 @@ public partial class Carrot : MonoBehaviour
 
     private IEnumerator servicesDiscoveryCoroutine()
     {
-        string urlString = String.Format("http://{0}/services.json?sdk_version={1}&sdk_platform={2}&game_id={3}&app_version={4}",
-            mServicesDiscoveryHost,
-            UnityEngine.WWW.EscapeURL(Carrot.SDKVersion),
-            UnityEngine.WWW.EscapeURL(SystemInfo.operatingSystem.Replace(" ", "_").ToLower()),
-            UnityEngine.WWW.EscapeURL(mFacebookAppId),
-            UnityEngine.WWW.EscapeURL(mBundleVersion));
-
-        UnityEngine.WWW request = new UnityEngine.WWW(urlString);
-        yield return request;
-
-        if(request.error == null)
+        if(string.IsNullOrEmpty(mFacebookAppId))
         {
-            Dictionary<string, object> reply = Json.Deserialize(request.text) as Dictionary<string, object>;
-            mPostHostname = reply["post"] as string;
-            mAuthHostname = reply["auth"] as string;
-            mMetricsHostname = reply["metrics"] as string;
-
-            if(!string.IsNullOrEmpty(mAccessTokenOrFacebookId))
-            {
-                validateUser(mAccessTokenOrFacebookId);
-            }
-            else
-            {
-                foreach(CarrotCache.CachedRequest crequest in mCarrotCache.RequestsInCache(mAuthStatus))
-                {
-                    StartCoroutine(signedRequestCoroutine(crequest, cachedRequestHandler(crequest, null)));
-                }
-            }
+            yield return new WaitForSeconds(1);
+            StartCoroutine(servicesDiscoveryCoroutine());
         }
         else
         {
-            // Log error and retry in 10 seconds
-            Debug.Log(request.error);
-            yield return new WaitForSeconds(10);
-            StartCoroutine(servicesDiscoveryCoroutine());
+            string urlString = String.Format("http://{0}/services.json?sdk_version={1}&sdk_platform={2}&game_id={3}&app_version={4}",
+                mServicesDiscoveryHost,
+                UnityEngine.WWW.EscapeURL(Carrot.SDKVersion),
+                UnityEngine.WWW.EscapeURL(SystemInfo.operatingSystem.Replace(" ", "_").ToLower()),
+                UnityEngine.WWW.EscapeURL(mFacebookAppId),
+                UnityEngine.WWW.EscapeURL(mBundleVersion));
+
+            UnityEngine.WWW request = new UnityEngine.WWW(urlString);
+            yield return request;
+
+            if(request.error == null)
+            {
+                Dictionary<string, object> reply = Json.Deserialize(request.text) as Dictionary<string, object>;
+                mPostHostname = reply["post"] as string;
+                mAuthHostname = reply["auth"] as string;
+                mMetricsHostname = reply["metrics"] as string;
+
+                if(!string.IsNullOrEmpty(mAccessTokenOrFacebookId))
+                {
+                    validateUser(mAccessTokenOrFacebookId);
+                }
+                else
+                {
+                    foreach(CarrotCache.CachedRequest crequest in mCarrotCache.RequestsInCache(mAuthStatus))
+                    {
+                        StartCoroutine(signedRequestCoroutine(crequest, cachedRequestHandler(crequest, null)));
+                    }
+                }
+            }
+            else
+            {
+                // Log error and retry in 10 seconds
+                Debug.Log(request.error);
+                yield return new WaitForSeconds(10);
+                StartCoroutine(servicesDiscoveryCoroutine());
+            }
         }
     }
 
