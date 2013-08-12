@@ -344,7 +344,7 @@ public class CarrotCache : IDisposable
     private const int SQLITE_DONE = 101;
 
     private const string kCacheCreateSQL = "CREATE TABLE IF NOT EXISTS cache(request_servicetype INTEGER, request_endpoint TEXT, request_payload TEXT, request_id TEXT, request_date REAL, retry_count INTEGER)";
-    private const string kCacheReadSQL = "SELECT rowid, request_servicetype, request_endpoint, request_payload, request_id, request_date, retry_count FROM cache WHERE request_servicetype<={0} ORDER BY retry_count";
+    private const string kCacheReadSQL = "SELECT rowid, request_servicetype, request_endpoint, request_payload, request_id, request_date, retry_count FROM cache WHERE request_servicetype<={0} ORDER BY retry_count LIMIT 10";
     private const string kCacheInsertSQL = "INSERT INTO cache (request_servicetype, request_endpoint, request_payload, request_id, request_date, retry_count) VALUES ('{0}', '{1}', '{2}', '{3}', '{4}', '{5}')";
     private const string kCacheUpdateSQL = "UPDATE cache SET retry_count='{0}' WHERE rowid='{1}'";
     private const string kCacheDeleteSQL = "DELETE FROM cache WHERE rowid='{0}'";
