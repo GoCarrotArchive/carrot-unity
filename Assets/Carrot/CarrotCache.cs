@@ -20,7 +20,7 @@
 
 #region References
 using System;
-using MiniJSON;
+using CarrotInc.MiniJSON;
 using UnityEngine;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;

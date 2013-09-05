@@ -14,7 +14,7 @@
  */
 
 using System;
-using MiniJSON;
+using CarrotInc.MiniJSON;
 using System.IO;
 using System.Net;
 using System.Text;

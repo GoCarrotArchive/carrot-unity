@@ -17,7 +17,7 @@
 
 #region References
 using System;
-using MiniJSON;
+using CarrotInc.MiniJSON;
 using System.Net;
 using UnityEngine;
 using System.Security;
