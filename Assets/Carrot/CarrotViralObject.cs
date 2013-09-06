@@ -59,18 +59,18 @@ public partial class Carrot
         }
 
         /// <summary>
-        /// The object instance id of the viral object to create or re-use.
-        /// If ObjectInstanceId is not specified, GUID will be generated instead.
+        /// The identifier of the viral object to create or re-use.
+        /// If Identifier is not specified, GUID will be generated instead.
         /// </summary>
-        public string ObjectInstanceId
+        public string Identifier
         {
             get
             {
-                return mObjectProperties["object_instance_id"] as string;
+                return mObjectProperties["identifier"] as string;
             }
             set
             {
-                mObjectProperties["object_instance_id"] = value;
+                mObjectProperties["identifier"] = value;
             }
         }
 
@@ -112,9 +112,9 @@ public partial class Carrot
         /// <param name="title">Title of the new viral object.</param>
         /// <param name="description">Description for the new viral object.</param>
         /// <param name="image">Texture2D to upload for the new viral object.</param>
-        /// <param name="objectInstanceId">Optional object instance id to create, or re-use.</params>
+        /// <param name="identifier">Optional object identifierto create, or re-use.</params>
         public ViralObject(string objectTypeId, string title, string description,
-                           Texture2D image, string objectInstanceId = null)
+                           Texture2D image, string identifier = null)
         {
             if(string.IsNullOrEmpty(objectTypeId))
             {
@@ -141,7 +141,7 @@ public partial class Carrot
             this.Title = title;
             this.Description = description;
             this.Image = image;
-            if(objectInstanceId != null) this.ObjectInstanceId = objectInstanceId;
+            if(identifier != null) this.Identifier = identifier;
         }
 
         /// <summary>
@@ -151,9 +151,9 @@ public partial class Carrot
         /// <param name="title">Title of the new viral object.</param>
         /// <param name="description">Description for the new viral object.</param>
         /// <param name="imageUrl">Image URL for the new viral object.</param>
-        /// <param name="objectInstanceId">Optional object instance id to create, or re-use.</params>
+        /// <param name="identifier">Optional object identifierto create, or re-use.</params>
         public ViralObject(string objectTypeId, string title, string description,
-                           string imageUrl, string objectInstanceId = null)
+                           string imageUrl, string identifier = null)
         {
             if(string.IsNullOrEmpty(objectTypeId))
             {
@@ -180,7 +180,7 @@ public partial class Carrot
             this.Title = title;
             this.Description = description;
             this.Image = imageUrl;
-            if(objectInstanceId != null) this.ObjectInstanceId = objectInstanceId;
+            if(identifier != null) this.Identifier = identifier;
         }
 
         public Dictionary<string, object> toDictionary()
