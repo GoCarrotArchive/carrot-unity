@@ -677,12 +677,12 @@ public partial class Carrot : MonoBehaviour
         return sig;
     }
 
-    private IEnumerator signedRequestCoroutine(CarrotCache.CachedRequest cachedRequest,
+    private IEnumerator signedRequestCoroutine(Request carrotRequest,
                                                CarrotRequestResponse callback = null)
     {
         Response ret = Response.UnknownError;
         string errorText = null;
-        string hostname = hostForServiceType(cachedRequest.ServiceType);
+        string hostname = hostForServiceType(carrotRequest.ServiceType);
 
         if(string.IsNullOrEmpty(hostname))
         {
@@ -700,10 +700,10 @@ public partial class Carrot : MonoBehaviour
         Dictionary<string, object> urlParams = new Dictionary<string, object> {
             {"api_key", mUserId},
             {"game_id", mFacebookAppId},
-            {"request_date", cachedRequest.RequestDate},
-            {"request_id", cachedRequest.RequestId}
+            {"request_date", carrotRequest.RequestDate},
+            {"request_id", carrotRequest.RequestId}
         };
-        Dictionary<string, object> parameters = cachedRequest.Parameters;
+        Dictionary<string, object> parameters = carrotRequest.Parameters;
 
         // If this has an attached image, bytes will be placed here.
         byte[] imageBytes = null;
@@ -757,7 +757,7 @@ public partial class Carrot : MonoBehaviour
             }
         }
 
-        string sig = signParams(hostname, cachedRequest.Endpoint, mCarrotAppSecret, urlParams);
+        string sig = signParams(hostname, carrotRequest.Endpoint, mCarrotAppSecret, urlParams);
         formPayload.AddField("sig", sig);
 
         // Attach image
@@ -766,7 +766,7 @@ public partial class Carrot : MonoBehaviour
             formPayload.AddBinaryData("image_bytes", imageBytes);
         }
 
-        UnityEngine.WWW request = new UnityEngine.WWW(String.Format("https://{0}{1}", hostname, cachedRequest.Endpoint), formPayload);
+        UnityEngine.WWW request = new UnityEngine.WWW(String.Format("https://{0}{1}", hostname, carrotRequest.Endpoint), formPayload);
         yield return request;
 
         Dictionary<string, object> reply = null;
@@ -798,37 +798,37 @@ public partial class Carrot : MonoBehaviour
             case 201:
             case 200: // Successful
                 ret = Response.OK;
-                if(cachedRequest.ServiceType != ServiceType.Metrics) this.Status = AuthStatus.Ready;
+                if(carrotRequest.ServiceType != ServiceType.Metrics) this.Status = AuthStatus.Ready;
                 break;
 
             case 401: // User has not authorized 'publish_actions', read only
                 ret = Response.ReadOnly;
-                if(cachedRequest.ServiceType != ServiceType.Metrics) this.Status = AuthStatus.ReadOnly;
+                if(carrotRequest.ServiceType != ServiceType.Metrics) this.Status = AuthStatus.ReadOnly;
                 break;
 
             case 402: // Service tier exceeded, not posted
                 ret = Response.UserLimitHit;
-                if(cachedRequest.ServiceType != ServiceType.Metrics) this.Status = AuthStatus.Ready;
+                if(carrotRequest.ServiceType != ServiceType.Metrics) this.Status = AuthStatus.Ready;
                 break;
 
             case 403: // Authentication error, app secret incorrect
                 ret = Response.BadAppSecret;
-                if(cachedRequest.ServiceType != ServiceType.Metrics) this.Status = AuthStatus.Ready;
+                if(carrotRequest.ServiceType != ServiceType.Metrics) this.Status = AuthStatus.Ready;
                 break;
 
             case 404: // Resource not found
                 ret = Response.NotFound;
-                if(cachedRequest.ServiceType != ServiceType.Metrics) this.Status = AuthStatus.Ready;
+                if(carrotRequest.ServiceType != ServiceType.Metrics) this.Status = AuthStatus.Ready;
                 break;
 
             case 405: // User is not authorized for Facebook App
                 ret = Response.NotAuthorized;
-                if(cachedRequest.ServiceType != ServiceType.Metrics) this.Status = AuthStatus.NotAuthorized;
+                if(carrotRequest.ServiceType != ServiceType.Metrics) this.Status = AuthStatus.NotAuthorized;
                 break;
 
             case 424: // Dynamic OG object not created due to parameter error
                 ret = Response.ParameterError;
-                if(cachedRequest.ServiceType != ServiceType.Metrics) this.Status = AuthStatus.Ready;
+                if(carrotRequest.ServiceType != ServiceType.Metrics) this.Status = AuthStatus.Ready;
                 break;
         }
         if(callback != null) callback(ret, errorText, reply);
@@ -843,6 +843,59 @@ public partial class Carrot : MonoBehaviour
     {
         // This is not ideal
         return true;
+    }
+    /// @endcond
+    #endregion
+
+    #region Request
+    /// @cond hide_from_doxygen
+    public class Request
+    {
+        public Dictionary<string, object> Parameters
+        {
+            get;
+            internal set;
+        }
+
+        public Carrot.ServiceType ServiceType
+        {
+            get;
+            internal set;
+        }
+
+        public string Endpoint
+        {
+            get;
+            internal set;
+        }
+
+        public string RequestId
+        {
+            get;
+            internal set;
+        }
+
+        public long RequestDate
+        {
+            get;
+            internal set;
+        }
+
+        public Request() {}
+
+        public Request(ServiceType serviceType, string endpoint, Dictionary<string, object> parameters)
+        {
+            this.ServiceType = serviceType;
+            this.Endpoint = endpoint;
+            this.Parameters = parameters;
+            this.RequestDate = (long)((DateTime.Now.ToUniversalTime().Ticks - 621355968000000000) / 10000000);
+            this.RequestId = System.Guid.NewGuid().ToString();
+        }
+
+        public override string ToString()
+        {
+            return string.Format("[{0}] {1} {2} - {3}: {4}", '-', this.ServiceType, this.RequestId, this.Endpoint, this.Parameters);
+        }
     }
     /// @endcond
     #endregion

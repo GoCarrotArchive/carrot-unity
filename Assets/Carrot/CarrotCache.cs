@@ -189,38 +189,8 @@ public class CarrotCache : IDisposable
         return cachedRequests;
     }
 
-    public class CachedRequest
+    public class CachedRequest : Carrot.Request
     {
-        public Dictionary<string, object> Parameters
-        {
-            get;
-            internal set;
-        }
-
-        public Carrot.ServiceType ServiceType
-        {
-            get;
-            internal set;
-        }
-
-        public string Endpoint
-        {
-            get;
-            internal set;
-        }
-
-        public string RequestId
-        {
-            get;
-            internal set;
-        }
-
-        public long RequestDate
-        {
-            get;
-            internal set;
-        }
-
         public int Retries
         {
             get;
