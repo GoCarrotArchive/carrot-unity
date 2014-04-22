@@ -49,13 +49,6 @@ public class MainMenu : MonoBehaviour
             Carrot.Instance.postAchievement(achieveString);
         }
 
-        // Like Game
-        GUILayout.Space(buttonSpacing);
-        if(GUILayout.Button("Like Game", GUILayout.Height(buttonHeight)))
-        {
-            Carrot.Instance.likeGame();
-        }
-
         // Action Post
         GUILayout.Space(buttonSpacing);
         actionString = GUILayout.TextField(actionString, buttonWidth);

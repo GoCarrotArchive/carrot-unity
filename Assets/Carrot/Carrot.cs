@@ -183,7 +183,7 @@ public partial class Carrot : MonoBehaviour
     /// <summary>
     /// The callback delegate type for Carrot requests.
     /// </summary>
-    public delegate void CarrotRequestResponse(Response response, string errorText);
+    public delegate void CarrotRequestResponse(Response response, string errorText, Dictionary<string, object> reply);
 
     /// <summary>
     /// Check the authentication status of the current Carrot user.
@@ -397,7 +397,7 @@ public partial class Carrot : MonoBehaviour
     private CarrotRequestResponse cachedRequestHandler(CarrotCache.CachedRequest cachedRequest,
                                                        CarrotRequestResponse callback)
     {
-        return (Response ret, string errorText) => {
+        return (Response ret, string errorText, Dictionary<string, object> reply) => {
                 switch(ret)
                 {
                     case Response.OK:
@@ -410,7 +410,7 @@ public partial class Carrot : MonoBehaviour
                         cachedRequest.AddRetryInCache();
                         break;
                 }
-                if(callback != null) callback(ret, errorText);
+                if(callback != null) callback(ret, errorText, reply);
         };
     }
     /// @endcond
@@ -424,7 +424,7 @@ public partial class Carrot : MonoBehaviour
         {
             yield return StartCoroutine(cachedRequestCoroutine(ServiceType.Metrics, "/install.json", new Dictionary<string, object>() {
                     {"install_date", mCarrotCache.InstallDate}
-            }, (Response response, string errorText) => {
+            }, (Response response, string errorText, Dictionary<string, object> reply) => {
                 if(response == Response.OK)
                 {
                     mCarrotCache.markInstallMetricSent();
@@ -646,7 +646,7 @@ public partial class Carrot : MonoBehaviour
         }
         else
         {
-            if(callback != null) callback(Response.OK, authStatusString(mAuthStatus));
+            if(callback != null) callback(Response.OK, authStatusString(mAuthStatus), null);
             yield return null;
         }
     }
@@ -686,7 +686,7 @@ public partial class Carrot : MonoBehaviour
 
         if(string.IsNullOrEmpty(hostname))
         {
-            if(callback != null) callback(Response.OK, "");
+            if(callback != null) callback(Response.OK, "", null);
             return false;
         }
 
@@ -769,6 +769,7 @@ public partial class Carrot : MonoBehaviour
         UnityEngine.WWW request = new UnityEngine.WWW(String.Format("https://{0}{1}", hostname, cachedRequest.Endpoint), formPayload);
         yield return request;
 
+        Dictionary<string, object> reply = null;
         int statusCode = 0;
         if(request.error != null)
         {
@@ -785,7 +786,7 @@ public partial class Carrot : MonoBehaviour
         }
         else
         {
-            Dictionary<string, object> reply = Json.Deserialize(request.text) as Dictionary<string, object>;
+            reply = Json.Deserialize(request.text) as Dictionary<string, object>;
             statusCode = (int)((long)reply["code"]);
         }
 
@@ -827,7 +828,7 @@ public partial class Carrot : MonoBehaviour
                 if(cachedRequest.ServiceType != ServiceType.Metrics) this.Status = AuthStatus.Ready;
                 break;
         }
-        if(callback != null) callback(ret, errorText);
+        if(callback != null) callback(ret, errorText, reply);
     }
     /// @endcond
     #endregion
