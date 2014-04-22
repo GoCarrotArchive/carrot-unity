@@ -373,62 +373,6 @@ public partial class Carrot : MonoBehaviour
     }
 
     /// <summary>
-    /// Post a 'Like' action that likes the Game's Facebook Page.
-    /// </summary>
-    /// <param name="callback">Optional <see cref="CarrotRequestResponse"/> which will be used to deliver the reply.</param>
-    public void likeGame(CarrotRequestResponse callback = null)
-    {
-        StartCoroutine(cachedRequestCoroutine(ServiceType.Post, "/me/like.json", new Dictionary<string, object>() {
-            {"object", "game"}
-        }, callback));
-    }
-
-    /// <summary>
-    /// Post a 'Like' action that likes the Publisher's Facebook Page.
-    /// </summary>
-    /// <param name="callback">Optional <see cref="CarrotRequestResponse"/> which will be used to deliver the reply.</param>
-    public void likePublisher(CarrotRequestResponse callback = null)
-    {
-        StartCoroutine(cachedRequestCoroutine(ServiceType.Post, "/me/like.json", new Dictionary<string, object>() {
-            {"object", "publisher"}
-        }, callback));
-    }
-
-    /// <summary>
-    /// Post a 'Like' action that likes an achievement.
-    /// </summary>
-    /// <param name="achievementId">The achievement identifier.</param>
-    /// <param name="callback">Optional <see cref="CarrotRequestResponse"/> which will be used to deliver the reply.</param>
-    public void likeAchievement(string achievementId, CarrotRequestResponse callback = null)
-    {
-        if(string.IsNullOrEmpty(achievementId))
-        {
-            throw new ArgumentNullException("achievementId must not be null or empty string.", "achievementId");
-        }
-
-        StartCoroutine(cachedRequestCoroutine(ServiceType.Post, "/me/like.json", new Dictionary<string, object>() {
-            {"object", "achievement:" + achievementId}
-        }, callback));
-    }
-
-    /// <summary>
-    /// Post a 'Like' action that likes an Open Graph object.
-    /// </summary>
-    /// <param name="objectId">The instance id of the Carrot object.</param>
-    /// <param name="callback">Optional <see cref="CarrotRequestResponse"/> which will be used to deliver the reply.</param>
-    public void likeObject(string objectId, CarrotRequestResponse callback = null)
-    {
-        if(string.IsNullOrEmpty(objectId))
-        {
-            throw new ArgumentNullException("objectId must not be null or empty string.", "objectId");
-        }
-
-        StartCoroutine(cachedRequestCoroutine(ServiceType.Post, "/me/like.json", new Dictionary<string, object>() {
-            {"object", "object:" + objectId}
-        }, callback));
-    }
-
-    /// <summary>
     /// Inform Carrot about a purchase of premium currency for metrics tracking.
     /// </summary>
     /// <param name="amount">The amount of real money spent.</param>
