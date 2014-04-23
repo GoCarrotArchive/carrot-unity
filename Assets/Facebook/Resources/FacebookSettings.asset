@@ -13,9 +13,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   selectedAppIndex: 0
   appIds:
-  - 0
+  - 280914862014150
   appLabels:
-  - App Name
+  - Carrot Demo
   cookie: 1
   logging: 1
   status: 1
