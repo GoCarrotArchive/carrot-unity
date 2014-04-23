@@ -21,6 +21,7 @@ using CarrotInc.MiniJSON;
 using System.Net;
 using UnityEngine;
 using System.Security;
+using System.Reflection;
 using System.Collections;
 using System.Net.Security;
 using CarrotInc.Amazon.Util;
@@ -392,6 +393,19 @@ public partial class Carrot : MonoBehaviour
     {
         mCarrotCache = new CarrotCache();
         this.InstallDate = new DateTime(1970, 1, 1, 0, 0, 0, 0).AddSeconds(mCarrotCache.InstallDate);
+
+        // Check to see if the official Facebook SDK is included
+        mFacebookDelegateType = Type.GetType("Facebook.FacebookDelegate,IFacebook");
+        if(mFacebookDelegateType != null)
+        {
+            Type t = Type.GetType("FB");
+            mOfficialFBSDKFeedMethod = t.GetMethod("Feed", BindingFlags.Static | BindingFlags.Public);
+
+            t = Type.GetType("FBResult,IFacebook");
+            mFBResultPropertyText = t.GetProperty("Text");
+            mFBResultPropertyError = t.GetProperty("Error");
+            mFacebookDelegateType = Type.GetType("Facebook.FacebookDelegate,IFacebook");
+        }
     }
 
     private CarrotRequestResponse cachedRequestHandler(CarrotCache.CachedRequest cachedRequest,
@@ -914,5 +928,9 @@ public partial class Carrot : MonoBehaviour
     private string mAccessTokenOrFacebookId;
     private CarrotCache mCarrotCache;
     private long mSessionStartTime;
+    private MethodInfo mOfficialFBSDKFeedMethod;
+    private PropertyInfo mFBResultPropertyText;
+    private PropertyInfo mFBResultPropertyError;
+    private Type mFacebookDelegateType;
     #endregion
 }
