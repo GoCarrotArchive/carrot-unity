@@ -16,6 +16,9 @@ public class MainMenu : MonoBehaviour
 
     void Start()
     {
+        FB.Init(() => {
+            Debug.Log("Facebook initialized");
+        });
         authStatus = Carrot.authStatusString(Carrot.AuthStatus.Undetermined);
 
         Carrot.AuthenticationStatusChanged += (object sender, Carrot.AuthStatus status) => {
