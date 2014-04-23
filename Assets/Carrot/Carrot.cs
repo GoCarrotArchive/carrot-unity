@@ -389,12 +389,19 @@ public partial class Carrot : MonoBehaviour
 
     #region Internal
     /// @cond hide_from_doxygen
+    public enum FacebookSDKType : int
+    {
+        None = -1,
+        OfficialUnitySDK = 0,
+        JavaScriptSDK = 1
+    }
+
     Carrot()
     {
         mCarrotCache = new CarrotCache();
         this.InstallDate = new DateTime(1970, 1, 1, 0, 0, 0, 0).AddSeconds(mCarrotCache.InstallDate);
 
-        // Check to see if the official Facebook SDK is included
+        // Check to see if the official Facebook SDK is being used
         mFacebookDelegateType = Type.GetType("Facebook.FacebookDelegate,IFacebook");
         if(mFacebookDelegateType != null)
         {
@@ -405,8 +412,36 @@ public partial class Carrot : MonoBehaviour
             mFBResultPropertyText = t.GetProperty("Text");
             mFBResultPropertyError = t.GetProperty("Error");
             mFacebookDelegateType = Type.GetType("Facebook.FacebookDelegate,IFacebook");
+
+            if(mFacebookDelegateType != null &&
+               mOfficialFBSDKFeedMethod != null &&
+               mFBResultPropertyText != null &&
+               mFBResultPropertyError != null &&
+               mFacebookDelegateType != null)
+            {
+                mFacebookSDKType = FacebookSDKType.OfficialUnitySDK;
+            }
         }
+#if UNITY_WEBPLAYER
+        // If on Unity WebPlayer, some use the JavaScript SDK
+        else
+        {
+            Application.ExternalEval("if(window.__carrotUnityInstance == null || window.__carrotUnityInstance == undefined) {" +
+                                     "    window.__carrotUnityInstance = UnityObject2.instances[0];" +
+                                     "}" +
+                                     "window.__carrotUnityInstance.getUnity().SendMessage('CarrotGameObject', 'assignUnityObject2Instance', 'window.__carrotUnityInstance');"
+            );
+        }
+#endif
     }
+
+#if UNITY_WEBPLAYER
+    private void assignUnityObject2Instance(string message)
+    {
+        mFacebookSDKType = FacebookSDKType.JavaScriptSDK;
+        mUnityObject2Instance = message;
+    }
+#endif
 
     private CarrotRequestResponse cachedRequestHandler(CarrotCache.CachedRequest cachedRequest,
                                                        CarrotRequestResponse callback)
@@ -928,6 +963,8 @@ public partial class Carrot : MonoBehaviour
     private string mAccessTokenOrFacebookId;
     private CarrotCache mCarrotCache;
     private long mSessionStartTime;
+    private FacebookSDKType mFacebookSDKType = FacebookSDKType.None;
+    private string mUnityObject2Instance = null;
     private MethodInfo mOfficialFBSDKFeedMethod;
     private PropertyInfo mFBResultPropertyText;
     private PropertyInfo mFBResultPropertyError;
