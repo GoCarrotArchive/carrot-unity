@@ -58,7 +58,8 @@ public class MainMenu : MonoBehaviour
         objectString = GUILayout.TextField(objectString, buttonWidth);
         if(GUILayout.Button("Post Object/Action", GUILayout.Height(buttonHeight)))
         {
-            Carrot.Instance.postAction(actionString, objectString);
+            //Carrot.Instance.postAction(actionString, objectString);
+            Carrot.Instance.popupFeedPost(objectString);
         }
 
         // Dynamic Action Post

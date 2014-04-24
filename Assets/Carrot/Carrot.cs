@@ -387,6 +387,78 @@ public partial class Carrot : MonoBehaviour
         }, callback));
     }
 
+    /// 
+    public void popupFeedPost(string objectInstanceId, Dictionary<string, object> objectProperties = null,
+                              CarrotRequestResponse callback = null)
+    {
+        if(string.IsNullOrEmpty(objectInstanceId))
+        {
+            throw new ArgumentNullException("objectInstanceId must not be null or empty string.", "objectInstanceId");
+        }
+
+        Dictionary<string, object> parameters = new Dictionary<string, object>() {
+            {"object_instance_id", objectInstanceId},
+            {"object_properties", objectProperties == null ? new Dictionary<string, object>() : objectProperties}
+        };
+
+        Request request = new Request(ServiceType.Post, "/me/feed_post.json", parameters);
+        StartCoroutine(signedRequestCoroutine(request, (Response response, string errorText, Dictionary<string, object> reply) => {
+            if(response == Response.OK)
+            {
+                Dictionary<string, object> fb_data = reply["fb_data"] as Dictionary<string, object>;
+
+                if(fb_data["method"] as string == "feed")
+                {
+                    if(mFacebookSDKType == FacebookSDKType.OfficialUnitySDK)
+                    {
+                        string actionName = "";
+                        string actionLink = "";
+                        if(fb_data.ContainsKey("actions"))
+                        {
+                            object[] actions = fb_data["actions"] as object[];
+                            if(actions != null && actions.Length > 0)
+                            {
+                                // Will only ever have 1 element
+                                Dictionary<string, object> action = actions[0] as Dictionary<string, object>;
+                                actionName = action["name"] as string;
+                                actionLink = action["link"] as string;
+                            }
+                        }
+
+                        MethodInfo mi1 = typeof(Carrot).GetMethod("unitySDKFeedPostCallback", BindingFlags.NonPublic | BindingFlags.Instance);
+                        object fbDelegate = Delegate.CreateDelegate(mFacebookDelegateType, this, mi1);
+                        mOfficialFBSDKFeedMethod.Invoke(null, new object[] {
+                            "", // FBID of timeline this should be posted to (default: current)
+                            fb_data["link"] as string,
+                            "", // Name of the link (default: App Name)
+                            fb_data["caption"] as string,
+                            fb_data["description"] as string,
+                            fb_data["picture"] as string,
+                            "", // URL of audio/video content
+                            actionName, // Action name
+                            actionLink, // Action link
+                            fb_data["ref"] as string,
+                            new Dictionary<string, string[]>{},
+                            fbDelegate
+                        });
+                    }
+                    else if(mFacebookSDKType == FacebookSDKType.JavaScriptSDK)
+                    {
+                        Application.ExternalEval("FB.ui(" + Json.Serialize(fb_data) + ", function(response) {" +
+                                                 "    if(response == null || response == undefined) { response = {canceled: true}; }" +
+                                                 "    " + mUnityObject2Instance + ".getUnity().SendMessage('CarrotGameObject', 'javascriptSDKFeedPostCallback', JSON.stringify(response));" +
+                                                 "});"
+                        );
+                    }
+                }
+            }
+            else
+            {
+                // Something-something danger zone
+            }
+        }));
+    }
+
     #region Internal
     /// @cond hide_from_doxygen
     public enum FacebookSDKType : int
@@ -461,6 +533,56 @@ public partial class Carrot : MonoBehaviour
                 }
                 if(callback != null) callback(ret, errorText, reply);
         };
+    }
+
+    protected void unitySDKFeedPostCallback(object fbResult)
+    {
+        string result = mFBResultPropertyText.GetValue(fbResult, null) as string;
+
+        Dictionary<string, object> reply = null;
+        if(!string.IsNullOrEmpty(result))
+        {
+            reply = Json.Deserialize(result) as Dictionary<string, object>;
+        }
+        else
+        {
+            result = mFBResultPropertyError.GetValue(fbResult, null) as string;
+            if(!string.IsNullOrEmpty(result))
+            {
+                reply = Json.Deserialize(result) as Dictionary<string, object>;
+            }
+        }
+        feedPostCallbackHandler(reply);
+    }
+
+#if UNITY_WEBPLAYER
+    protected void javascriptSDKFeedPostCallback(string message)
+    {
+        Dictionary<string, object> reply = Json.Deserialize(message) as Dictionary<string, object>;
+        feedPostCallbackHandler(reply);
+    }
+#endif
+
+    protected void feedPostCallbackHandler(Dictionary<string, object> reply)
+    {
+        string postId = null;
+        if(reply != null)
+        {
+            postId = (reply.ContainsKey("post_id") ? reply["post_id"] as string : (reply.ContainsKey("id") ? reply["id"] as string : null));
+        }
+
+        if(postId == null)
+        {
+            // SEND BACK METRIC
+            Debug.Log("POST WAS CANCELED");
+            Application.ExternalEval("console.log('POST WAS CANCELED');");
+        }
+        else
+        {
+            // SEND BACK METRIC
+            Debug.Log(postId);
+            Application.ExternalEval("console.log('" + postId + "');");
+        }
     }
     /// @endcond
     #endregion
