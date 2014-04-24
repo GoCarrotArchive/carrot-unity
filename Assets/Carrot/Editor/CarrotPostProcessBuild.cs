@@ -67,7 +67,10 @@ public static class CarrotPostProcessBuild
                 }
             }
         }
-        finally {}
+        catch(Exception e)
+        {
+            if(e == null) Debug.Log("Ignore this.");
+        }
     }
 
     static string Load(string fullPath)
