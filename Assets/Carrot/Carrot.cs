@@ -571,17 +571,11 @@ public partial class Carrot : MonoBehaviour
             postId = (reply.ContainsKey("post_id") ? reply["post_id"] as string : (reply.ContainsKey("id") ? reply["id"] as string : null));
         }
 
-        if(postId == null)
+        if(postId != null)
         {
-            // SEND BACK METRIC
-            Debug.Log("POST WAS CANCELED");
-            Application.ExternalEval("console.log('POST WAS CANCELED');");
-        }
-        else
-        {
-            // SEND BACK METRIC
-            Debug.Log(postId);
-            Application.ExternalEval("console.log('" + postId + "');");
+            StartCoroutine(cachedRequestCoroutine(ServiceType.Metrics, "/feed_dialog_post.json", new Dictionary<string, object>() {
+                {"platform_id", postId}
+            }));
         }
     }
     /// @endcond
